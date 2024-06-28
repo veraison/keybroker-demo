@@ -19,10 +19,9 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          application/vnd.veraison.keybroker.background-check-key-request+json:
             schema:
-              $ref: '#/components/schemas/KeyRequest'
-
+              $ref: '#/components/schemas/BackgroundCheckKeyRequest'
       responses:
         201:
           description: >
@@ -92,7 +91,7 @@ components:
         type: string
 
   schemas:
-    KeyRequest:
+    BackgroundCheckKeyRequest:
       required:
         - pubkey
       properties:
