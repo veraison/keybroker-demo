@@ -1,0 +1,175 @@
+openapi: '3.0.0'
+
+info:
+  title: Minimal Demo Key Broker Service
+  description: Service acting as relying party in a RATS deployment where Veraison is the verifier
+  version: '1.0.0alpha'
+
+servers:
+  - url: 'https://veraison.demo.keybroker/keys/v1'
+
+paths:
+  /key/{KeyId}:
+    post:
+      description: >
+        Initiate a key request for the key with the given ID. The attester provides a public
+        wrapping key.
+      parameters:
+        - $ref: '#/components/parameters/KeyId'
+      requestBody:
+        required: true
+        content:
+          application/vnd.veraison.keybroker.background-check-key-request+json:
+            schema:
+              $ref: '#/components/schemas/BackgroundCheckKeyRequest'
+      responses:
+        201:
+          description: >
+              An attestation challenge is created, and the Location header provides a
+              URL to which the attester can post its evidence in order to obtain the
+              wrapped key.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+              description: >
+                The URL to which the attester should post its evidence in order to
+                obtain the wrapped key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttestationChallenge'
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInformation'
+                
+  /evidence/{ChallengeId}:
+    post:
+      description: >
+        Provide evidence in response to a given challenge.
+      parameters:
+        - $ref: '#/components/parameters/ChallengeId'
+      requestBody:
+        required: true
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/EvidenceBytes'
+
+      responses:
+        200:
+          description: Wrapped key data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WrappedKeyData'
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInformation'
+
+components:
+  parameters:
+    KeyId:
+      name: KeyId
+      in: path
+      required: true
+      schema:
+        type: string
+    
+    ChallengeId:
+      name: ChallengeId
+      in: path
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    BackgroundCheckKeyRequest:
+      required:
+        - pubkey
+      properties:
+        pubkey:
+          $ref: '#/components/schemas/PublicWrappingKey'
+          description: Public key-wrapping key
+
+    AttestationChallenge:
+      required:
+        - challenge
+        - accept
+      properties:
+        challenge:
+          type: string
+          format: byte
+          description: >
+            Base64-encoded challenge value (nonce) for the attester. The attester
+            must include this nonce in the signed evidence.
+        accept:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceContentType'
+            description: >
+              Acceptable MIME types for attestation Evidence submission. The attester
+              must provide evidence of one of these types.
+
+    EvidenceBytes:
+      type: string
+      example: 'eyJhbGciO...RfrKmTWk'
+      description: >
+        Base64 encoded Evidence
+
+    EvidenceContentType:
+      type: string
+      example: 'application/psa-attestation-token'
+
+    WrappedKeyData:
+      required:
+        - data
+      properties:
+        data:
+          type: string
+          format: byte
+          description: >
+            Key data, wrapped using the public key that was provided in the initial key request.
+
+    PublicWrappingKey:
+      required:
+        - kty
+        - alg
+        - n
+        - e
+      properties:
+        kty:
+          type: string
+          description: Key Type
+        alg:
+          type: string
+          description: Key Algorithm
+        n:
+          type: string
+          description: Key modulus
+        e:
+          type: string
+          description: Key exponent
+      description: >-
+        A JSON Web Key (https://www.rfc-editor.org/rfc/rfc7517) formatted RSA Public Key.
+
+    ErrorInformation:
+      required:
+        - type
+        - detail
+      properties:
+        type:
+          type: string
+          format: uri
+        detail:
+          type: string
+      description: >-
+        A Problem Details for HTTP APIs (https://www.rfc-editor.org/rfc/rfc9457)
+        formatted payload.
