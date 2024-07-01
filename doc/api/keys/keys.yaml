@@ -166,11 +166,10 @@ components:
         - detail
       properties:
         type:
-          description: >-
-            https://github.com/confidential-containers/kbs/errors/<problem-type>
           type: string
+          format: uri
         detail:
           type: string
       description: >-
-        A Problem Details for HTTP APIs (https://www.rfc-editor.org/rfc/rfc7807)
+        A Problem Details for HTTP APIs (https://www.rfc-editor.org/rfc/rfc9457)
         formatted payload.
