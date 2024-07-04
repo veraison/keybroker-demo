@@ -1,0 +1,29 @@
+name: Rust
+
+on:
+  push:
+    paths:
+    - 'rust-keybroker/**'
+  pull_request:
+    paths:
+    - 'rust-keybroker/**'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Formatting checks
+      run: cargo fmt --manifest-path=rust-keybroker/Cargo.toml --all -- --check
+    - name: Clippy checks
+      run: cargo clippy --manifest-path=rust-keybroker/Cargo.toml --all-targets -- -D clippy::all -D clippy::cargo -A clippy::multiple-crate-versions
+    - name: Build
+      run: cargo build --manifest-path=rust-keybroker/Cargo.toml --verbose
+    - name: Run tests
+      run: cargo test --manifest-path=rust-keybroker/Cargo.toml --verbose
