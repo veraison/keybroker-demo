@@ -1,0 +1,8 @@
+[workspace]
+
+members = [
+    "keybroker-client",
+    "keybroker-common",
+    "keybroker-server",
+    "keybroker-app",
+]
