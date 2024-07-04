@@ -1,0 +1,21 @@
+name: OpenAPI
+
+on:
+  push:
+    paths:
+    - 'doc/api/**'
+  pull_request:
+    paths:
+    - 'doc/api/**'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install OpenAPI spec validator
+      run: pip install openapi-spec-validator
+    - name: Check key-broker API
+      run: openapi-spec-validator doc/api/keys/keys.yaml
