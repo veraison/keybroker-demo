@@ -4,4 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+actix-web = "4"
+base64 = "0.22.1"
+thiserror = "1.0.63"
+serde = "1.0.204"
 keybroker-common = { path = "../keybroker-common" }
+veraison-apiclient = { git = "https://github.com/veraison/rust-apiclient.git" }
+ear = { git = "https://github.com/veraison/rust-ear.git" }

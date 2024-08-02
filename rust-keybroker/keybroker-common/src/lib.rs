@@ -1,17 +1,51 @@
 // Copyright 2024 Contributors to the Veraison project.
 // SPDX-License-Identifier: Apache-2.0
 
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
+
+pub struct AttestationChallenge {
+    pub challenge: String,
+    pub accept: Vec<EvidenceContentType>,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+pub struct BackgroundCheckKeyRequest {
+    pub pubkey: PublicWrappingKey,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
+
+pub struct ErrorInformation {
+    pub r#type: String,
+    pub detail: String,
+}
+
+pub type EvidenceBytes = String;
+
+pub type EvidenceContentType = String;
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
+
+pub struct PublicWrappingKey {
+    pub kty: String,
+    pub alg: String,
+    pub n: String,
+    pub e: String,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
+
+pub struct WrappedKeyData {
+    pub data: String,
 }
