@@ -10,6 +10,7 @@ use keybroker_common::{
 };
 
 mod error;
+mod keystore;
 mod verifier;
 
 // This is the challenge value from from https://git.trustedfirmware.org/TF-M/tf-m-tools/+/refs/heads/main/iat-verifier/tests/data/cca_example_token.cbor

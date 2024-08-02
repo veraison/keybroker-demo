@@ -14,6 +14,15 @@ pub enum Error {
 
     #[error(transparent)]
     VerificationError(#[from] VerificationErrorKind),
+
+    #[error(transparent)]
+    RsaError(#[from] rsa::Error),
+
+    #[error(transparent)]
+    KeyStoreError(#[from] KeyStoreErrorKind),
+
+    #[error(transparent)]
+    Base64DecodeError(#[from] base64::DecodeError),
 }
 
 /// Errors happening within the verification process logic.
@@ -22,6 +31,20 @@ pub enum VerificationErrorKind {
     /// It was not possible to find the challenge-response newSession endpoint
     #[error("No newChallengeResponseSession endpoint was found on the Veraison server.")]
     NoChallengeResponseEndpoint,
+}
+
+/// Errors happening within the key store.
+#[derive(Error, Debug)]
+pub enum KeyStoreErrorKind {
+    /// Attempt to obtain a key that is not in the store.
+    #[error("Requested key is not in the store.")]
+    KeyNotFound,
+
+    #[error("The wrapping key type is not supported. Wrapping key must be an RSA key.")]
+    UnsupportedWrappingKeyType,
+
+    #[error("Thw wrapping key encryption algorithm is not supported.")]
+    UnsupportedWrappingKeyAlgorithm,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
