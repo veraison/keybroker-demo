@@ -1,7 +1,9 @@
 // Copyright 2024 Contributors to the Veraison project.
 // SPDX-License-Identifier: Apache-2.0
 
-use actix_web::{get, http, post, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{
+    get, http, post, rt::task, web, App, HttpRequest, HttpResponse, HttpServer, Responder,
+};
 use base64::prelude::*;
 use keybroker_common::{
     AttestationChallenge, BackgroundCheckKeyRequest, ErrorInformation, WrappedKeyData,
@@ -52,38 +54,48 @@ async fn submit_evidence(
 
     let evidence_bytes = BASE64_STANDARD.decode(evidence_base64).unwrap(); // TODO: Error handling needed here in case of faulty base64 input
 
-    /*
+    // We are in an async context, but the verifier client is synchronous, so spawn
+    // it as a blocking task.
+    let handle = task::spawn_blocking(move || {
+        // TODO: Allow the veraison endpoint to be configurable. Currently using the Linaro-provided instance for emulated platforms.
+        // TODO: Use the media content type from the request's Content-Type header - currently not doing that because actix_web doesn't like the CCA media type
+        // TODO: Use of hard-coded nonce here - temporary until we have proper sessions based on the key request
+        verifier::verify_with_veraison_instance(
+            "http://veraison.test.linaro.org:8080",
+            "application/eat-collection; profile=http://arm.com/CCA-SSD/1.0.0",
+            CCA_EXAMPLE_TOKEN_NONCE,
+            &evidence_bytes,
+        )
+    });
+    let result = handle.await.unwrap();
 
-    (verification not working yet)
+    match result {
+        Ok(verified) => {
+            // Switch on whether the evidence was successfully verified or not.
+            if verified {
+                // TODO: The attestation is valid - so wrap a key out of the key store here. Currently returning a dummy response that is not encrypted at all.
+                let wrapped_key = WrappedKeyData {
+                    data: "May the force be with you".to_string(),
+                };
 
-    // TODO: Allow the veraison endpoint to be configurable. Currently using the Linaro-provided instance for emulated platforms.
-    // TODO: Use the media content type from the request's Content-Type header - currently not doing that because actix_web doesn't like the CCA media type
-    // TODO: Use of hard-coded nonce here - temporary until we have proper sessions based on the key request
-    let verified = verifier::verify_with_veraison_instance(
-        "http://veraison.test.linaro.org:8080",
-        "application/eat-collection; profile=http://arm.com/CCA-SSD/1.0.0",
-        CCA_EXAMPLE_TOKEN_NONCE,
-        &evidence_bytes,
-    );
-    */
+                HttpResponse::Ok().json(wrapped_key)
+            } else {
+                let error_info = ErrorInformation {
+                    r#type: "AttestationFailure".to_string(),
+                    detail: "The attestation result is not in policy..".to_string(),
+                };
 
-    let verified = true;
+                HttpResponse::Forbidden().json(error_info)
+            }
+        }
+        Err(_) => {
+            let error_info = ErrorInformation {
+                r#type: "AttestationFailure".to_string(),
+                detail: "No attestation result was obtained..".to_string(),
+            };
 
-    // Switch on whether the evidence was successfully verified or not.
-    if verified {
-        // TODO: The attestation is valid - so wrap a key out of the key store here. Currently returning a dummy response that is not encrypted at all.
-        let wrapped_key = WrappedKeyData {
-            data: "May the force be with you".to_string(),
-        };
-
-        HttpResponse::Ok().json(wrapped_key)
-    } else {
-        let error_info = ErrorInformation {
-            r#type: "AttestationFailure".to_string(),
-            detail: "The attestation failed.".to_string(),
-        };
-
-        HttpResponse::Forbidden().json(error_info)
+            HttpResponse::Forbidden().json(error_info)
+        }
     }
 }
 
