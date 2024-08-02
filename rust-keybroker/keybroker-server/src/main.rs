@@ -7,6 +7,7 @@ use keybroker_common::{
     AttestationChallenge, BackgroundCheckKeyRequest, ErrorInformation, WrappedKeyData,
 };
 
+mod error;
 mod verifier;
 
 // This is the challenge value from from https://git.trustedfirmware.org/TF-M/tf-m-tools/+/refs/heads/main/iat-verifier/tests/data/cca_example_token.cbor

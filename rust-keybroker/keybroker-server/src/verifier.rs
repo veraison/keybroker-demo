@@ -1,6 +1,7 @@
 // Copyright 2024 Contributors to the Veraison project.
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::error::Result;
 use ear::{Algorithm, Ear, TrustTier};
 use veraison_apiclient::*;
 
@@ -9,37 +10,38 @@ pub fn verify_with_veraison_instance(
     media_type: &str,
     challenge: &[u8],
     evidence: &[u8],
-) -> bool {
+) -> Result<bool> {
     // Get the discovery URL from the base URL
-    let discovery = Discovery::from_base_url(String::from(verifier_base_url))
-        .expect("Failed to start API discovery with the service.");
+    let discovery = Discovery::from_base_url(String::from(verifier_base_url))?;
 
     // Quiz the discovery endpoint for the verification endpoint
-    let verification_api = discovery
-        .get_verification_api()
-        .expect("Failed to discover the verification endpoint details.");
+    let verification_api = discovery.get_verification_api()?;
 
     // Get the challenge-response endpoint from the verification endpoint
-    let relative_endpoint = verification_api
-        .get_api_endpoint("newChallengeResponseSession")
-        .expect("Could not locate a newChallengeResponseSession endpoint.");
+    let relative_endpoint = verification_api.get_api_endpoint("newChallengeResponseSession");
+
+    if relative_endpoint.is_none() {
+        return Err(crate::error::Error::VerificationError(
+            crate::error::VerificationErrorKind::NoChallengeResponseEndpoint,
+        ));
+    }
+
+    // Can't panic now
+    let relative_endpoint = relative_endpoint.unwrap();
 
     let api_endpoint = format!("{}{}", verifier_base_url, relative_endpoint);
 
     // create a ChallengeResponse object
     let cr = ChallengeResponseBuilder::new()
         .with_new_session_url(api_endpoint)
-        .build()
-        .unwrap();
+        .build()?;
 
     let nonce = Nonce::Value(challenge.to_vec());
 
-    let (session_url, _session) = cr.new_session(&nonce).unwrap();
+    let (session_url, _session) = cr.new_session(&nonce)?;
 
     // Run the challenge-response session
-    let ear_string = cr
-        .challenge_response(evidence, media_type, &session_url)
-        .unwrap();
+    let ear_string = cr.challenge_response(evidence, media_type, &session_url)?;
 
     // EARs are signed by Veraison. The public verification key is conveyed within the
     // endpoint descriptor that we pulled from the discovery API before. We can grab this
@@ -52,10 +54,18 @@ pub fn verify_with_veraison_instance(
     // from https://github.com/veraison/rust-ear
     // We start by getting the Ear structure from the JWT, which also does a signature
     // check.
-    let ear =
-        Ear::from_jwt_jwk(&ear_string, Algorithm::ES256, verification_key_string.as_bytes()).unwrap();
+    let ear = Ear::from_jwt_jwk(
+        &ear_string,
+        Algorithm::ES256,
+        verification_key_string.as_bytes(),
+    )?;
 
     // The simplest possible appraisal policy: accept if we have an AFFIRMING result from
     // every submodule of the token.
-    ear.submods.iter().all(|(_module, appraisal)| appraisal.status == TrustTier::Affirming)
+    let verified = ear
+        .submods
+        .iter()
+        .all(|(_module, appraisal)| appraisal.status == TrustTier::Affirming);
+
+    Ok(verified)
 }
