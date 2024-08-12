@@ -9,6 +9,7 @@ base64 = "0.22.1"
 thiserror = "1.0.63"
 serde = "1.0.204"
 rsa = "0.9.6"
+sha2 = "0.10.8"
 rand = "0.8.5"
 keybroker-common = { path = "../keybroker-common" }
 veraison-apiclient = { git = "https://github.com/veraison/rust-apiclient.git" }

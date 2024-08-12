@@ -3,11 +3,16 @@
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::prelude::*;
-use keybroker_common::PublicWrappingKey;
-use rsa::{BigUint, Pkcs1v15Encrypt, RsaPublicKey};
+use keybroker_common::{PublicWrappingKey, WrappedKeyData};
+use rsa::{BigUint, Oaep, Pkcs1v15Encrypt, RsaPublicKey};
+use sha2::Sha256;
 
 use crate::error::Result;
 use std::collections::HashMap;
+
+const RSA_KEY_TYPE: &str = "RSA";
+const RSA_PKCS15_ALGORITHM: &str = "RSA1_5";
+const RSA_OAEP_ALGORITHM: &str = "RSA-OAEP";
 
 /// A minimally simple key-value store where the lookup keys are strings and the values
 /// are byte arrays (octet vectors).
@@ -47,7 +52,17 @@ impl KeyStore {
     }
 
     /// Obtain a wrapped (encrypted) data item from the store.
-    pub fn wrap_key(&self, key_id: &String, wrapping_key: &PublicWrappingKey) -> Result<Vec<u8>> {
+    pub fn wrap_key(
+        &self,
+        key_id: &String,
+        wrapping_key: &PublicWrappingKey,
+    ) -> Result<WrappedKeyData> {
+        if wrapping_key.kty != *RSA_KEY_TYPE {
+            return Err(crate::error::Error::KeyStoreError(
+                crate::error::KeyStoreErrorKind::UnsupportedWrappingKeyType,
+            ));
+        }
+
         let k_mod = URL_SAFE_NO_PAD.decode(&wrapping_key.n)?;
         let n = BigUint::from_bytes_be(&k_mod);
         let k_exp = URL_SAFE_NO_PAD.decode(&wrapping_key.e)?;
@@ -59,12 +74,100 @@ impl KeyStore {
 
         if let Some(entry) = self.keys.get_key_value(key_id) {
             let (_k, data) = entry;
-            let wrapped_data = rsa_pub_key.encrypt(&mut rng, Pkcs1v15Encrypt, data)?;
-            Ok(wrapped_data)
+            let wrapped_data = {
+                if wrapping_key.alg == *RSA_PKCS15_ALGORITHM {
+                    rsa_pub_key.encrypt(&mut rng, Pkcs1v15Encrypt, data)
+                } else if wrapping_key.alg == *RSA_OAEP_ALGORITHM {
+                    let padding = Oaep::new::<Sha256>();
+                    rsa_pub_key.encrypt(&mut rng, padding, data)
+                } else {
+                    return Err(crate::error::Error::KeyStoreError(
+                        crate::error::KeyStoreErrorKind::UnsupportedWrappingKeyAlgorithm,
+                    ));
+                }
+            }?;
+            let data_base64 = URL_SAFE_NO_PAD.encode(wrapped_data);
+            let retobj = WrappedKeyData { data: data_base64 };
+            Ok(retobj)
         } else {
             Err(crate::error::Error::KeyStoreError(
                 crate::error::KeyStoreErrorKind::KeyNotFound,
             ))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rsa::{traits::PublicKeyParts, RsaPrivateKey};
+
+    fn key_store_round_trip(kty: &str, alg: &str) {
+        let mut store = KeyStore::new();
+
+        // Put a key into the store
+        let key_id = "skywalker";
+        let key_content = "May the force be with you.";
+        store.store_key(&key_id.to_string(), key_content.as_bytes().to_vec());
+
+        // Create an ephemeral wrapping key-pair
+        let mut rng = rand::thread_rng();
+        let bits = 1024;
+        let priv_key =
+            RsaPrivateKey::new(&mut rng, bits).expect("Failed to generate ephemeral wrapping key.");
+
+        // Get the public key and deconstruct into modulus and exponent
+        let pub_key = RsaPublicKey::from(&priv_key);
+        let k_mod = pub_key.n();
+        let k_exp = pub_key.e();
+
+        // Create base64 strings for n and e
+        let k_mod_base64 = URL_SAFE_NO_PAD.encode(BigUint::to_bytes_be(k_mod));
+        let k_exp_base64 = URL_SAFE_NO_PAD.encode(BigUint::to_bytes_be(k_exp));
+
+        // Turn this into API-level input
+        let wrapping_key = PublicWrappingKey {
+            kty: kty.to_string(),
+            alg: alg.to_string(),
+            n: k_mod_base64,
+            e: k_exp_base64,
+        };
+
+        // Make the API call
+        let wrapped_data = store
+            .wrap_key(&key_id.to_string(), &wrapping_key)
+            .expect("Key store did not return the wrapped key.");
+
+        // Decode and decrypt with the private key.
+        let ciphertext = URL_SAFE_NO_PAD
+            .decode(wrapped_data.data)
+            .expect("Failed to base64-decode the wrapped data from the key store.");
+        let plaintext = {
+            if alg == RSA_PKCS15_ALGORITHM {
+                priv_key
+                    .decrypt(Pkcs1v15Encrypt, &ciphertext)
+                    .expect("Failed to decrypt wrapped data from the key store.")
+            } else if alg == RSA_OAEP_ALGORITHM {
+                let padding = Oaep::new::<Sha256>();
+                priv_key
+                    .decrypt(padding, &ciphertext)
+                    .expect("Failed to decrypt wrapped data from the key store.")
+            } else {
+                vec![]
+            }
+        };
+
+        // Check we got it back
+        assert_eq!(key_content.as_bytes(), &plaintext);
+    }
+
+    #[test]
+    fn round_trip_rsa_pkcs15() {
+        key_store_round_trip(RSA_KEY_TYPE, RSA_PKCS15_ALGORITHM)
+    }
+
+    #[test]
+    fn round_trip_rsa_oaep() {
+        key_store_round_trip(RSA_KEY_TYPE, RSA_OAEP_ALGORITHM)
     }
 }
