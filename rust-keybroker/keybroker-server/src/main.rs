@@ -5,10 +5,10 @@ use actix_web::{
     get, http, post, rt::task, web, App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use base64::prelude::*;
+use clap::Parser;
 use keybroker_common::{
     AttestationChallenge, BackgroundCheckKeyRequest, ErrorInformation, WrappedKeyData,
 };
-
 mod error;
 mod keystore;
 mod verifier;
@@ -100,15 +100,26 @@ async fn submit_evidence(
     }
 }
 
+/// Structure for parsing and storing the command-line arguments
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// The port on which the web server will listen
+    #[arg(short, long, default_value_t = 8088)]
+    port: u16,
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    let args = Args::parse();
+
     HttpServer::new(|| {
         let scope = web::scope("/keys/v1")
             .service(request_key)
             .service(submit_evidence);
         App::new().service(scope)
     })
-    .bind(("127.0.0.1", 8088))?
+    .bind(("127.0.0.1", args.port))?
     .run()
     .await
 }
