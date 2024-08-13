@@ -22,6 +22,9 @@ pub enum Error {
     KeyStoreError(#[from] KeyStoreErrorKind),
 
     #[error(transparent)]
+    ChallengeError(#[from] ChallengeErrorKind),
+
+    #[error(transparent)]
     Base64DecodeError(#[from] base64::DecodeError),
 }
 
@@ -45,6 +48,14 @@ pub enum KeyStoreErrorKind {
 
     #[error("Thw wrapping key encryption algorithm is not supported.")]
     UnsupportedWrappingKeyAlgorithm,
+}
+
+/// Errors related to the management of challenges
+#[derive(Error, Debug)]
+pub enum ChallengeErrorKind {
+    /// Attempt to lookup a challenge with an unknown ID.
+    #[error("Reference to a challenge that does not exist.")]
+    ChallengeNotFound,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

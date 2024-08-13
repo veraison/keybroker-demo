@@ -9,6 +9,7 @@ use clap::Parser;
 use keybroker_common::{
     AttestationChallenge, BackgroundCheckKeyRequest, ErrorInformation, WrappedKeyData,
 };
+mod challenge;
 mod error;
 mod keystore;
 mod verifier;
