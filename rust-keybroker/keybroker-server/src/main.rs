@@ -1,60 +1,89 @@
 // Copyright 2024 Contributors to the Veraison project.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::sync::Mutex;
+
 use actix_web::{
     get, http, post, rt::task, web, App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::prelude::*;
+use challenge::Challenger;
 use clap::Parser;
-use keybroker_common::{
-    AttestationChallenge, BackgroundCheckKeyRequest, ErrorInformation, WrappedKeyData,
-};
+use keybroker_common::{AttestationChallenge, BackgroundCheckKeyRequest, ErrorInformation};
+use keystore::KeyStore;
 mod challenge;
 mod error;
 mod keystore;
 mod verifier;
 
-// This is the challenge value from from https://git.trustedfirmware.org/TF-M/tf-m-tools/+/refs/heads/main/iat-verifier/tests/data/cca_example_token.cbor
-const CCA_EXAMPLE_TOKEN_NONCE: &'static [u8] = &[
-    0x6e, 0x86, 0xd6, 0xd9, 0x7c, 0xc7, 0x13, 0xbc, 0x6d, 0xd4, 0x3d, 0xbc, 0xe4, 0x91, 0xa6, 0xb4,
-    0x03, 0x11, 0xc0, 0x27, 0xa8, 0xbf, 0x85, 0xa3, 0x9d, 0xa6, 0x3e, 0x9c, 0xe4, 0x4c, 0x13, 0x2a,
-    0x8a, 0x11, 0x9d, 0x29, 0x6f, 0xae, 0x6a, 0x69, 0x99, 0xe9, 0xbf, 0x3e, 0x44, 0x71, 0xb0, 0xce,
-    0x01, 0x24, 0x5d, 0x88, 0x94, 0x24, 0xc3, 0x1e, 0x89, 0x79, 0x3b, 0x3b, 0x1d, 0x6b, 0x15, 0x04,
-];
-
 #[post("/key/{keyid}")]
 async fn request_key(
     path: web::Path<String>,
+    data: web::Data<ServerState>,
     key_request: web::Json<BackgroundCheckKeyRequest>,
 ) -> impl Responder {
     let key_id = path.into_inner();
 
-    // TODO: Mock implementation for now
+    // Get a new challenge from the challenger.
+    let mut challenger = data.challenger.lock().expect("Poisoned challenger lock.");
+    let challenge = challenger.create_challenge(&key_id, &key_request.pubkey);
+
+    // TODO: The "accept" list is being hardcoded for Arm CCA here - it should come from the verifier.
     let attestation_challenge = AttestationChallenge {
-        challenge: BASE64_STANDARD.encode(CCA_EXAMPLE_TOKEN_NONCE),
+        challenge: URL_SAFE_NO_PAD.encode(&challenge.challenge_value),
         accept: vec![
             "application/eat-collection; profile=http://arm.com/CCA-SSD/1.0.0".to_string(),
         ],
     };
 
-    HttpResponse::Created().json(attestation_challenge)
+    let location = format!(
+        "{}:{}/keys/v1/evidence/{}",
+        data.args.baseurl, data.args.port, challenge.challenge_id
+    );
+
+    // TODO: Remove this println - tracer message for dev purposes only.
+    println!("Created attestation challenge at {}", location);
+
+    HttpResponse::Created()
+        .append_header((http::header::LOCATION, location))
+        .json(attestation_challenge)
 }
 
 #[post("/evidence/{challengeid}")]
 async fn submit_evidence(
-    path: web::Path<String>,
+    path: web::Path<u32>,
+    data: web::Data<ServerState>,
     request: HttpRequest,
     evidence_base64: String,
 ) -> impl Responder {
     let challenge_id = path.into_inner();
     let default_content_type = http::header::HeaderValue::from_static("application/string");
 
+    let mut challenger = data.challenger.lock().expect("Poisoned challenger lock.");
+    let challenge = challenger.get_challenge(challenge_id);
+
+    if (challenge.is_err()) {
+        let error_info = ErrorInformation {
+            r#type: "AttestationFailure".to_string(),
+            detail: "The challenge identifier did not match any issued challenge.".to_string(),
+        };
+
+        return HttpResponse::Forbidden().json(error_info);
+    }
+
+    // This unwrap is now safe because we did the error check above.
+    let challenge = challenge.unwrap();
+
+    // Once the evidence is submitted, delete the challenge. It can't be used again.
+    challenger.delete_challenge(challenge_id).unwrap();
+
     let content_type = request
         .headers()
         .get(http::header::CONTENT_TYPE)
         .unwrap_or(&default_content_type);
 
-    let evidence_bytes = BASE64_STANDARD.decode(evidence_base64).unwrap(); // TODO: Error handling needed here in case of faulty base64 input
+    let evidence_bytes = URL_SAFE_NO_PAD.decode(evidence_base64).unwrap(); // TODO: Error handling needed here in case of faulty base64 input
 
     // We are in an async context, but the verifier client is synchronous, so spawn
     // it as a blocking task.
@@ -65,7 +94,7 @@ async fn submit_evidence(
         verifier::verify_with_veraison_instance(
             "http://veraison.test.linaro.org:8080",
             "application/eat-collection; profile=http://arm.com/CCA-SSD/1.0.0",
-            CCA_EXAMPLE_TOKEN_NONCE,
+            &challenge.challenge_value,
             &evidence_bytes,
         )
     });
@@ -75,10 +104,11 @@ async fn submit_evidence(
         Ok(verified) => {
             // Switch on whether the evidence was successfully verified or not.
             if verified {
-                // TODO: The attestation is valid - so wrap a key out of the key store here. Currently returning a dummy response that is not encrypted at all.
-                let wrapped_key = WrappedKeyData {
-                    data: "May the force be with you".to_string(),
-                };
+                let keystore = data.keystore.lock().expect("Poisoned keystore lock.");
+                let data = keystore.wrap_key(&challenge.key_id, &challenge.wrapping_key);
+
+                // TODO: Error checks - can't just unwrap here
+                let wrapped_key = data.unwrap();
 
                 HttpResponse::Ok().json(wrapped_key)
             } else {
@@ -102,23 +132,49 @@ async fn submit_evidence(
 }
 
 /// Structure for parsing and storing the command-line arguments
-#[derive(Parser, Debug)]
+#[derive(Clone, Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
     /// The port on which the web server will listen
     #[arg(short, long, default_value_t = 8088)]
     port: u16,
+
+    #[arg(short, long, default_value = "http://127.0.0.1")]
+    baseurl: String,
+}
+
+struct ServerState {
+    args: Args,
+    keystore: Mutex<KeyStore>,
+    challenger: Mutex<Challenger>,
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let args = Args::parse();
 
-    HttpServer::new(|| {
+    let mut keystore = KeyStore::new();
+    let challenger = Challenger::new();
+
+    // TODO: Just storing one hard-coded item in the store. Would be better to read from an input file.
+    keystore.store_key(
+        &"skywalker".to_string(),
+        "May the force be with you.".as_bytes().to_vec(),
+    );
+
+    let server_state = ServerState {
+        args: args.clone(),
+        keystore: Mutex::new(keystore),
+        challenger: Mutex::new(challenger),
+    };
+
+    let app_data = web::Data::new(server_state);
+
+    HttpServer::new(move || {
         let scope = web::scope("/keys/v1")
             .service(request_key)
             .service(submit_evidence);
-        App::new().service(scope)
+        App::new().app_data(app_data.clone()).service(scope)
     })
     .bind(("127.0.0.1", args.port))?
     .run()
