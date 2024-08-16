@@ -85,14 +85,14 @@ async fn submit_evidence(
 
     let evidence_bytes = URL_SAFE_NO_PAD.decode(evidence_base64).unwrap(); // TODO: Error handling needed here in case of faulty base64 input
 
+    let verifier_base = data.args.verifier.clone();
+
     // We are in an async context, but the verifier client is synchronous, so spawn
     // it as a blocking task.
     let handle = task::spawn_blocking(move || {
-        // TODO: Allow the veraison endpoint to be configurable. Currently using the Linaro-provided instance for emulated platforms.
         // TODO: Use the media content type from the request's Content-Type header - currently not doing that because actix_web doesn't like the CCA media type
-        // TODO: Use of hard-coded nonce here - temporary until we have proper sessions based on the key request
         verifier::verify_with_veraison_instance(
-            "http://veraison.test.linaro.org:8080",
+            &verifier_base,
             "application/eat-collection; profile=http://arm.com/CCA-SSD/1.0.0",
             &challenge.challenge_value,
             &evidence_bytes,
@@ -141,6 +141,9 @@ struct Args {
 
     #[arg(short, long, default_value = "http://127.0.0.1")]
     baseurl: String,
+
+    #[arg(short, long, default_value = "http://veraison.test.linaro.org:8080")]
+    verifier: String,
 }
 
 struct ServerState {
