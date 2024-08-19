@@ -2,6 +2,13 @@
 name = "keybroker-app"
 version = "0.1.0"
 edition = "2021"
+authors = ["Veraison Project Contributors"]
+description = "Simple command-line application demonstrating the keybroker."
+license = "Apache-2.0"
+repository = "https://github.com/veraison/keybroker-demo"
+readme = "README.md"
+keywords = ["security", "service", "attestation"]
+categories = ["cryptography", "hardware-support"]
 
 [dependencies]
 keybroker-client = { path = "../keybroker-client" }
