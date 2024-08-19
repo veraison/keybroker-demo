@@ -1,18 +1,46 @@
 // Copyright 2024 Contributors to the Veraison project.
 // SPDX-License-Identifier: Apache-2.0
 
+//! This module handles the creation and caching of challenges.
+//!
+//! A challenge is allocated whenever a client of the keybroker makes its initial request to access a key from the store.
+//! Keys are never returned directly to the client. Instead, a challenge is created. This challenge invites the client to
+//! form a bundle of attestation evidence to prove that it is trustworthy to receive the key. The client must incorporate
+//! the challenge value (commonly called a "nonce") into the signed attestation evidence, according to the specific
+//! conventions of the evidence type that it employs.
+//!
+//! When a challenge is allocated, it is cached by the server along with all of the details that the client initially
+//! provided: included the identity of the key that it wants to access, and the public wrapping key that it provided in
+//! order to keep the data protected in transit.
+//!
+//! Challenges are given their own unique identities (simple 32-bit integer values) and cached within the keybroker service,
+//! with the expectation that the client will later attempt to redeem the challenge by submitting an evidence bundle.
+//!
 use crate::error::Result;
 use keybroker_common::PublicWrappingKey;
 use std::collections::HashMap;
 
+/// Represents a single challenge, and provides the challenge value ("nonce") while also remembering the information
+/// that the client provided in order to access a key.
 #[derive(Debug, Clone)]
 pub struct Challenge {
+    /// The identity of the challenge itself. A simple integer value, designed to be unique only within the keybroker
+    /// server instance. This value (represented in decimal) also forms part of the URL path when the client
+    /// redeems the challenge by supplying the attestation evidence bundle.
     pub challenge_id: u32,
+
+    /// The identity of the key that the client wants to access.
     pub key_id: String,
+
+    /// The public part of the wrapping key pair that the client has specified for use in order to protect the
+    /// secret data in transit when it is later returned.
     pub wrapping_key: PublicWrappingKey,
+
+    /// The challenge value (nonce) that the client must incorporate into the evidence bundle.
     pub challenge_value: Vec<u8>,
 }
 
+/// This structure provides a hash map of challenges, keyed on the integer challenge identifier.
 pub struct Challenger {
     challenge_table: HashMap<u32, Challenge>,
 }
@@ -34,6 +62,10 @@ impl Challenger {
         }
     }
 
+    /// Allocate a new challenge and store it in the table.
+    ///
+    /// The inputs are the identity of the key that the client wants to access, and the public wrapping
+    /// key that the client has specified to encrypt and protect the data in transit.
     pub fn create_challenge(
         &mut self,
         key_id: &str,
@@ -62,6 +94,7 @@ impl Challenger {
         challenge
     }
 
+    /// Looks up a challenge in the table and returns it, failing if no such challenge is found.
     pub fn get_challenge(&self, challenge_id: u32) -> Result<Challenge> {
         let challenge = self.challenge_table.get(&challenge_id);
         match challenge {
@@ -72,6 +105,14 @@ impl Challenger {
         }
     }
 
+    /// Deletes a challenge from the table, failing if no such challenge is found.
+    ///
+    /// The key broker deletes challenges eagerly, rather than relying on a garbage collection mechanism.
+    /// This is for the sake of simplicity, since this is only a demo keybroker. Challenges are deleted
+    /// as soon as the client makes an attempt to redeem the challenge by providing an attestation
+    /// token. This happens even if the attestation verification fails, meaning that the client only
+    /// has one opportunity to redeem any given challenge, otherwise it needs to begin the key
+    /// request all over again.
     pub fn delete_challenge(&mut self, challenge_id: u32) -> Result<()> {
         let challenge = self.challenge_table.remove(&challenge_id);
         match challenge {
