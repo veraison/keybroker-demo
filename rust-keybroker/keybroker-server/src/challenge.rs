@@ -75,7 +75,7 @@ impl Challenger {
     pub fn delete_challenge(&mut self, challenge_id: u32) -> Result<()> {
         let challenge = self.challenge_table.remove(&challenge_id);
         match challenge {
-            Some(c) => Ok(()),
+            Some(_c) => Ok(()),
             None => Err(crate::error::Error::ChallengeError(
                 crate::error::ChallengeErrorKind::ChallengeNotFound,
             )),

@@ -3,9 +3,7 @@
 
 use std::sync::Mutex;
 
-use actix_web::{
-    get, http, post, rt::task, web, App, HttpRequest, HttpResponse, HttpServer, Responder,
-};
+use actix_web::{http, post, rt::task, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::prelude::*;
 use challenge::Challenger;
@@ -63,7 +61,7 @@ async fn submit_evidence(
     let mut challenger = data.challenger.lock().expect("Poisoned challenger lock.");
     let challenge = challenger.get_challenge(challenge_id);
 
-    if (challenge.is_err()) {
+    if challenge.is_err() {
         let error_info = ErrorInformation {
             r#type: "AttestationFailure".to_string(),
             detail: "The challenge identifier did not match any issued challenge.".to_string(),
@@ -78,7 +76,8 @@ async fn submit_evidence(
     // Once the evidence is submitted, delete the challenge. It can't be used again.
     challenger.delete_challenge(challenge_id).unwrap();
 
-    let content_type = request
+    // TODO: We are currently ignoring the content type from the request and assuming a CCA eat-collection.
+    let _content_type = request
         .headers()
         .get(http::header::CONTENT_TYPE)
         .unwrap_or(&default_content_type);
