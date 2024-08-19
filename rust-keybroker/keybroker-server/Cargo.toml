@@ -2,6 +2,13 @@
 name = "keybroker-server"
 version = "0.1.0"
 edition = "2021"
+authors = ["Veraison Project Contributors"]
+description = "A simple web service that can provide keys and secrets in exchange for verifiable attestation tokens."
+license = "Apache-2.0"
+repository = "https://github.com/veraison/keybroker-demo"
+readme = "README.md"
+keywords = ["security", "service", "attestation"]
+categories = ["cryptography", "hardware-support"]
 
 [dependencies]
 actix-web = "4"

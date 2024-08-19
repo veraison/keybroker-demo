@@ -58,23 +58,25 @@ async fn submit_evidence(
     let challenge_id = path.into_inner();
     let default_content_type = http::header::HeaderValue::from_static("application/string");
 
-    let mut challenger = data.challenger.lock().expect("Poisoned challenger lock.");
-    let challenge = challenger.get_challenge(challenge_id);
+    let challenge = {
+        let mut challenger = data.challenger.lock().expect("Poisoned challenger lock.");
+        let challenge = challenger.get_challenge(challenge_id);
 
-    if challenge.is_err() {
-        let error_info = ErrorInformation {
-            r#type: "AttestationFailure".to_string(),
-            detail: "The challenge identifier did not match any issued challenge.".to_string(),
-        };
+        if challenge.is_err() {
+            let error_info = ErrorInformation {
+                r#type: "AttestationFailure".to_string(),
+                detail: "The challenge identifier did not match any issued challenge.".to_string(),
+            };
 
-        return HttpResponse::Forbidden().json(error_info);
-    }
+            return HttpResponse::Forbidden().json(error_info);
+        }
 
-    // This unwrap is now safe because we did the error check above.
-    let challenge = challenge.unwrap();
+        // Once the evidence is submitted, delete the challenge. It can't be used again.
+        challenger.delete_challenge(challenge_id).unwrap();
 
-    // Once the evidence is submitted, delete the challenge. It can't be used again.
-    challenger.delete_challenge(challenge_id).unwrap();
+        // This unwrap is now safe because we did the error check above.
+        challenge.unwrap()
+    };
 
     // TODO: We are currently ignoring the content type from the request and assuming a CCA eat-collection.
     let _content_type = request
@@ -160,7 +162,7 @@ async fn main() -> std::io::Result<()> {
 
     // TODO: Just storing one hard-coded item in the store. Would be better to read from an input file.
     keystore.store_key(
-        &"skywalker".to_string(),
+        "skywalker",
         "May the force be with you.".as_bytes().to_vec(),
     );
 

@@ -2,6 +2,13 @@
 name = "keybroker-client"
 version = "0.1.0"
 edition = "2021"
+authors = ["Veraison Project Contributors"]
+description = "Rust client library for the demo keybroker."
+license = "Apache-2.0"
+repository = "https://github.com/veraison/keybroker-demo"
+readme = "README.md"
+keywords = ["security", "service", "attestation"]
+categories = ["cryptography", "hardware-support"]
 
 [dependencies]
 keybroker-common = { path = "../keybroker-common" }

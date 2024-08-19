@@ -2,6 +2,13 @@
 name = "keybroker-common"
 version = "0.1.0"
 edition = "2021"
+authors = ["Veraison Project Contributors"]
+description = "Common API data types used by both server and client for the demo keybroker."
+license = "Apache-2.0"
+repository = "https://github.com/veraison/keybroker-demo"
+readme = "README.md"
+keywords = ["security", "service", "attestation"]
+categories = ["cryptography", "hardware-support"]
 
 [dependencies]
 serde = { version = "1.0.204", features = ["serde_derive"] }

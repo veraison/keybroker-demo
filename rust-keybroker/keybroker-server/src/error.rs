@@ -7,25 +7,25 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum Error {
     #[error(transparent)]
-    VeraisonApiError(#[from] veraison_apiclient::Error),
+    VeraisonApi(#[from] veraison_apiclient::Error),
 
     #[error(transparent)]
-    EarError(#[from] ear::Error),
+    Ear(#[from] ear::Error),
 
     #[error(transparent)]
-    VerificationError(#[from] VerificationErrorKind),
+    Verification(#[from] VerificationErrorKind),
 
     #[error(transparent)]
-    RsaError(#[from] rsa::Error),
+    Rsa(#[from] rsa::Error),
 
     #[error(transparent)]
-    KeyStoreError(#[from] KeyStoreErrorKind),
+    KeyStore(#[from] KeyStoreErrorKind),
 
     #[error(transparent)]
-    ChallengeError(#[from] ChallengeErrorKind),
+    Challenge(#[from] ChallengeErrorKind),
 
     #[error(transparent)]
-    Base64DecodeError(#[from] base64::DecodeError),
+    Base64Decode(#[from] base64::DecodeError),
 }
 
 /// Errors happening within the verification process logic.

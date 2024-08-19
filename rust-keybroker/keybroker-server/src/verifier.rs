@@ -21,7 +21,7 @@ pub fn verify_with_veraison_instance(
     let relative_endpoint = verification_api.get_api_endpoint("newChallengeResponseSession");
 
     if relative_endpoint.is_none() {
-        return Err(crate::error::Error::VerificationError(
+        return Err(crate::error::Error::Verification(
             crate::error::VerificationErrorKind::NoChallengeResponseEndpoint,
         ));
     }

@@ -47,8 +47,8 @@ impl KeyStore {
     /// function that is only used by the internals of the key broker to build the contents
     /// of the store from trusted internal sources, such as command-line arguments or a local
     /// configuration file.
-    pub fn store_key(&mut self, key_id: &String, data: Vec<u8>) -> () {
-        self.keys.insert(key_id.clone(), data.clone());
+    pub fn store_key(&mut self, key_id: &str, data: Vec<u8>) {
+        self.keys.insert(key_id.to_owned(), data.clone());
     }
 
     /// Obtain a wrapped (encrypted) data item from the store.
@@ -58,7 +58,7 @@ impl KeyStore {
         wrapping_key: &PublicWrappingKey,
     ) -> Result<WrappedKeyData> {
         if wrapping_key.kty != *RSA_KEY_TYPE {
-            return Err(crate::error::Error::KeyStoreError(
+            return Err(crate::error::Error::KeyStore(
                 crate::error::KeyStoreErrorKind::UnsupportedWrappingKeyType,
             ));
         }
@@ -81,7 +81,7 @@ impl KeyStore {
                     let padding = Oaep::new::<Sha256>();
                     rsa_pub_key.encrypt(&mut rng, padding, data)
                 } else {
-                    return Err(crate::error::Error::KeyStoreError(
+                    return Err(crate::error::Error::KeyStore(
                         crate::error::KeyStoreErrorKind::UnsupportedWrappingKeyAlgorithm,
                     ));
                 }
@@ -90,7 +90,7 @@ impl KeyStore {
             let retobj = WrappedKeyData { data: data_base64 };
             Ok(retobj)
         } else {
-            Err(crate::error::Error::KeyStoreError(
+            Err(crate::error::Error::KeyStore(
                 crate::error::KeyStoreErrorKind::KeyNotFound,
             ))
         }
@@ -108,7 +108,7 @@ mod tests {
         // Put a key into the store
         let key_id = "skywalker";
         let key_content = "May the force be with you.";
-        store.store_key(&key_id.to_string(), key_content.as_bytes().to_vec());
+        store.store_key(key_id, key_content.as_bytes().to_vec());
 
         // Create an ephemeral wrapping key-pair
         let mut rng = rand::thread_rng();
