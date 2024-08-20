@@ -56,7 +56,7 @@ async fn submit_evidence(
     evidence_base64: String,
 ) -> impl Responder {
     let challenge_id = path.into_inner();
-    let default_content_type = http::header::HeaderValue::from_static("application/string");
+    let default_content_type = http::header::HeaderValue::from_static("text/plain");
 
     let challenge = {
         let mut challenger = data.challenger.lock().expect("Poisoned challenger lock.");
