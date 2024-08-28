@@ -78,11 +78,11 @@ async fn submit_evidence(
         challenge.unwrap()
     };
 
-    // TODO: We are currently ignoring the content type from the request and assuming a CCA eat-collection.
-    let _content_type = request
+    let content_type = request
         .headers()
         .get(http::header::CONTENT_TYPE)
-        .unwrap_or(&default_content_type);
+        .unwrap_or(&default_content_type)
+        .clone();
 
     let evidence_bytes = URL_SAFE_NO_PAD.decode(evidence_base64).unwrap(); // TODO: Error handling needed here in case of faulty base64 input
 
@@ -91,10 +91,13 @@ async fn submit_evidence(
     // We are in an async context, but the verifier client is synchronous, so spawn
     // it as a blocking task.
     let handle = task::spawn_blocking(move || {
-        // TODO: Use the media content type from the request's Content-Type header - currently not doing that because actix_web doesn't like the CCA media type
+        // TODO: In theory, this unwrap() could fail and panic if there are non-printing characters in the content type header.
+        let content_type_str = content_type.to_str().unwrap();
+
+        // TODO: Blind pass-through of content type here. Ideally we should do a friendly check against the set that Veraison supports.
         verifier::verify_with_veraison_instance(
             &verifier_base,
-            "application/eat-collection; profile=http://arm.com/CCA-SSD/1.0.0",
+            content_type_str,
             &challenge.challenge_value,
             &evidence_bytes,
         )
