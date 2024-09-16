@@ -36,8 +36,8 @@ async fn request_key(
     };
 
     let location = format!(
-        "{}:{}/keys/v1/evidence/{}",
-        data.args.baseurl, data.args.port, challenge.challenge_id
+        "{}/keys/v1/evidence/{}",
+        data.base_url, challenge.challenge_id
     );
 
     // TODO: Remove this println - tracer message for dev purposes only.
@@ -139,12 +139,20 @@ async fn submit_evidence(
 #[derive(Clone, Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// The port on which the web server will listen
+    /// The interface on which this server will listen (use 0.0.0.0 to listen on all interfaces)
+    #[arg(short, long, default_value = "127.0.0.1")]
+    addr: String,
+
+    /// The port on which this server will listen
     #[arg(short, long, default_value_t = 8088)]
     port: u16,
 
-    #[arg(short, long, default_value = "http://127.0.0.1")]
-    baseurl: String,
+    /// The base URL at which this server can be reached back for evidence submission.
+    /// If not specified on the command line, it will be set to 'http://{addr}', but
+    /// this value can be overridden with an FQDN for {addr} in order to use name resolution.
+    /// The port number will be appended, so don't leave a trailing '/' to the URL.
+    #[arg(short, long, default_value = None)]
+    base_url: Option<String>,
 
     /// The URL where the verifier can be reached
     #[arg(short, long, default_value = "http://veraison.test.linaro.org:8080")]
@@ -153,6 +161,7 @@ struct Args {
 
 struct ServerState {
     args: Args,
+    base_url: String,
     keystore: Mutex<KeyStore>,
     challenger: Mutex<Challenger>,
 }
@@ -172,6 +181,10 @@ async fn main() -> std::io::Result<()> {
 
     let server_state = ServerState {
         args: args.clone(),
+        base_url : match args.base_url {
+            Some(url) => format!("{}:{}", url, args.port),
+            None => format!("http://{}:{}", args.addr, args.port),
+        },
         keystore: Mutex::new(keystore),
         challenger: Mutex::new(challenger),
     };
@@ -184,7 +197,7 @@ async fn main() -> std::io::Result<()> {
             .service(submit_evidence);
         App::new().app_data(app_data.clone()).service(scope)
     })
-    .bind(("127.0.0.1", args.port))?
+    .bind((args.addr, args.port))?
     .run()
     .await
 }
