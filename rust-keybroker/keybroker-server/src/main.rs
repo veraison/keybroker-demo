@@ -25,7 +25,8 @@ async fn request_key(
 
     // Get a new challenge from the challenger.
     let mut challenger = data.challenger.lock().expect("Poisoned challenger lock.");
-    let challenge = challenger.create_challenge(&key_id, &key_request.pubkey);
+    let challenge =
+        challenger.create_challenge(&key_id, &key_request.pubkey, data.args.mock_challenge);
 
     // TODO: The "accept" list is being hardcoded for Arm CCA here - it should come from the verifier.
     let attestation_challenge = AttestationChallenge {
@@ -159,6 +160,10 @@ struct Args {
     #[arg(long, default_value = "http://veraison.test.linaro.org:8080")]
     verifier: String,
 
+    /// Use the static CCA example token nonce instead of a randomly generated one
+    #[arg(short, long, default_value_t = false)]
+    mock_challenge: bool,
+
     /// Set the server verbosity
     #[arg(short, long, default_value_t = false)]
     verbose: bool,
@@ -176,7 +181,8 @@ async fn main() -> std::io::Result<()> {
     let args = Args::parse();
 
     let mut keystore = KeyStore::new();
-    let challenger = Challenger::new();
+    let mut challenger = Challenger::new();
+    challenger.verbose = args.verbose;
 
     // TODO: Just storing one hard-coded item in the store. Would be better to read from an input file.
     keystore.store_key(
@@ -186,7 +192,7 @@ async fn main() -> std::io::Result<()> {
 
     let server_state = ServerState {
         args: args.clone(),
-        base_url : match args.base_url {
+        base_url: match args.base_url {
             Some(url) => format!("{}:{}", url, args.port),
             None => format!("http://{}:{}", args.addr, args.port),
         },

@@ -18,6 +18,7 @@
 //!
 use crate::error::Result;
 use keybroker_common::PublicWrappingKey;
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
 
 /// Represents a single challenge, and provides the challenge value ("nonce") while also remembering the information
@@ -43,6 +44,8 @@ pub struct Challenge {
 /// This structure provides a hash map of challenges, keyed on the integer challenge identifier.
 pub struct Challenger {
     challenge_table: HashMap<u32, Challenge>,
+    rng: StdRng,
+    pub verbose: bool,
 }
 
 // This is the challenge value from from https://git.trustedfirmware.org/TF-M/tf-m-tools/+/refs/heads/main/iat-verifier/tests/data/cca_example_token.cbor
@@ -59,6 +62,8 @@ impl Challenger {
     pub fn new() -> Challenger {
         Challenger {
             challenge_table: HashMap::new(),
+            rng: StdRng::from_entropy(),
+            verbose: false,
         }
     }
 
@@ -70,26 +75,42 @@ impl Challenger {
         &mut self,
         key_id: &str,
         wrapping_key: &PublicWrappingKey,
+        mock_challenge: bool,
     ) -> Challenge {
         // All challenges are given random u32 identities
-        let mut challenge_id: u32 = rand::random();
+        let mut challenge_id: u32 = self.rng.gen();
 
         // Simple lightweight collision avoidance - probably not needed given u32 distribution space,
         // but it's easy to do. Also allows us to throw out zero if we get it.
         while challenge_id == 0 || self.challenge_table.contains_key(&challenge_id) {
-            challenge_id = rand::random();
+            challenge_id = self.rng.gen();
         }
 
         let challenge = Challenge {
             challenge_id,
             key_id: key_id.to_owned(),
             wrapping_key: wrapping_key.clone(),
-            // TODO: We should create a random nonce here. The use of this mock value allows the
-            // server to be tested with a hard-coded example attestation token during development.
-            challenge_value: CCA_EXAMPLE_TOKEN_NONCE.to_vec(),
+            challenge_value: if mock_challenge {
+                CCA_EXAMPLE_TOKEN_NONCE.to_vec()
+            } else {
+                let mut v: Vec<u8> = vec![0; 64];
+                self.rng.fill(&mut v[..]);
+                v
+            },
         };
 
         self.challenge_table.insert(challenge_id, challenge.clone());
+
+        if self.verbose {
+            println!("Created challenge:");
+            println!(" - challenge_id: {}", challenge_id);
+            println!(" - key_id: {}", challenge.key_id);
+            println!(
+                " - challenge value ({} bytes): {:02x?}",
+                challenge.challenge_value.len(),
+                challenge.challenge_value
+            );
+        }
 
         challenge
     }
