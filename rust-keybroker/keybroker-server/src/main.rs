@@ -38,7 +38,7 @@ async fn request_key(
 
     let location = format!(
         "{}/keys/v1/evidence/{}",
-        data.base_url, challenge.challenge_id
+        data.endpoint, challenge.challenge_id
     );
 
     if data.args.verbose {
@@ -149,12 +149,12 @@ struct Args {
     #[arg(short, long, default_value_t = 8088)]
     port: u16,
 
-    /// The base URL at which this server can be reached back for evidence submission.
-    /// If not specified on the command line, it will be set to 'http://{addr}', but
-    /// this value can be overridden with an FQDN for {addr} in order to use name resolution.
-    /// The port number will be appended, so don't leave a trailing '/' to the URL.
+    /// The address at which this server can be reached to request a key or submit an evidence.
+    /// It will be set by default to 'http://{addr}', but this value can be overridden with
+    /// an FQDN for {addr} in order to use name resolution for example.
+    /// The port number will be appended, so don't leave a trailing '/' to the FQDN.
     #[arg(short, long, default_value = None)]
-    base_url: Option<String>,
+    endpoint: Option<String>,
 
     /// The URL where the verifier can be reached
     #[arg(long, default_value = "http://veraison.test.linaro.org:8080")]
@@ -171,7 +171,7 @@ struct Args {
 
 struct ServerState {
     args: Args,
-    base_url: String,
+    endpoint: String,
     keystore: Mutex<KeyStore>,
     challenger: Mutex<Challenger>,
 }
@@ -192,7 +192,7 @@ async fn main() -> std::io::Result<()> {
 
     let server_state = ServerState {
         args: args.clone(),
-        base_url: match args.base_url {
+        endpoint: match args.endpoint {
             Some(url) => format!("{}:{}", url, args.port),
             None => format!("http://{}:{}", args.addr, args.port),
         },
