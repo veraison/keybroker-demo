@@ -118,7 +118,7 @@ async fn submit_evidence(
             } else {
                 let error_info = ErrorInformation {
                     r#type: "AttestationFailure".to_string(),
-                    detail: "The attestation result is not in policy..".to_string(),
+                    detail: "The attestation result is not in policy.".to_string(),
                 };
 
                 HttpResponse::Forbidden().json(error_info)
@@ -127,7 +127,7 @@ async fn submit_evidence(
         Err(_) => {
             let error_info = ErrorInformation {
                 r#type: "AttestationFailure".to_string(),
-                detail: "No attestation result was obtained..".to_string(),
+                detail: "No attestation result was obtained.".to_string(),
             };
 
             HttpResponse::Forbidden().json(error_info)
