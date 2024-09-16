@@ -40,8 +40,9 @@ async fn request_key(
         data.base_url, challenge.challenge_id
     );
 
-    // TODO: Remove this println - tracer message for dev purposes only.
-    println!("Created attestation challenge at {}", location);
+    if data.args.verbose {
+        println!("Created attestation challenge at {}", location);
+    }
 
     HttpResponse::Created()
         .append_header((http::header::LOCATION, location))
@@ -155,8 +156,12 @@ struct Args {
     base_url: Option<String>,
 
     /// The URL where the verifier can be reached
-    #[arg(short, long, default_value = "http://veraison.test.linaro.org:8080")]
+    #[arg(long, default_value = "http://veraison.test.linaro.org:8080")]
     verifier: String,
+
+    /// Set the server verbosity
+    #[arg(short, long, default_value_t = false)]
+    verbose: bool,
 }
 
 struct ServerState {
