@@ -146,6 +146,7 @@ struct Args {
     #[arg(short, long, default_value = "http://127.0.0.1")]
     baseurl: String,
 
+    /// The URL where the verifier can be reached
     #[arg(short, long, default_value = "http://veraison.test.linaro.org:8080")]
     verifier: String,
 }
