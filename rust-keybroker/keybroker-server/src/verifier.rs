@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::error::Result;
-use ear::{Algorithm, Ear, TrustTier};
+use crate::policy;
+use ear::{Algorithm, Ear};
 use veraison_apiclient::*;
 
 pub fn verify_with_veraison_instance(
@@ -10,6 +11,8 @@ pub fn verify_with_veraison_instance(
     media_type: &str,
     challenge: &[u8],
     evidence: &[u8],
+    policy: Option<String>,
+    rims: &str,
 ) -> Result<bool> {
     // Get the discovery URL from the base URL
     let discovery = Discovery::from_base_url(String::from(verifier_base_url))?;
@@ -60,14 +63,13 @@ pub fn verify_with_veraison_instance(
         verification_key_string.as_bytes(),
     )?;
 
-    // The simplest possible appraisal policy: accept if we have an AFFIRMING or WARNING result
-    // from every submodule.
-    // TODO: This policy is rather too "relaxed" - the simplest and strictest policy would be
-    //       to require AFFIRMING from every submodule. We have some integration issues with Veraison
-    //       today that prevent this.
-    let verified = ear.submods.iter().all(|(_module, appraisal)| {
-        appraisal.status == TrustTier::Affirming || appraisal.status == TrustTier::Warning
-    });
+    let ear_claims = serde_json::to_string(&ear)?;
 
-    Ok(verified)
+    // Appraise the received EAR using the embedded policy (see ./policy.rego)
+    // unless a custom one has been provided on the command line.  The default
+    // policy also wants to match the RIM value reported by the CCA token with
+    // the known-good RIM values supplied on the command line.
+    let results = policy::rego_eval(policy, rims, &ear_claims)?;
+
+    Ok(results.to_string() == "true")
 }

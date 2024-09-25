@@ -1,0 +1,36 @@
+{
+  "eat_nonce": "bobW2XzHE7xt1D285JGmtAMRwCeov4WjnaY-nORMEyqKEZ0pb65qaZnpvz5EcbDOASRdiJQkwx6JeTs7HWsVBA==",
+  "eat_profile": "tag:github.com,2023:veraison/ear",
+  "submods": {
+    "CCA_REALM": {
+      "ear.status": "warning",
+      "ear.trustworthiness-vector": {
+        "configuration": 0,
+        "executables": 33,
+        "file-system": 0,
+        "hardware": 0,
+        "instance-identity": 2,
+        "runtime-opaque": 0,
+        "sourced-data": 0,
+        "storage-opaque": 0
+      },
+      "ear.veraison.annotated-evidence": {
+        "cca-realm-challenge": "bobW2XzHE7xt1D285JGmtAMRwCeov4WjnaY+nORMEyqKEZ0pb65qaZnpvz5EcbDOASRdiJQkwx6JeTs7HWsVBA==",
+        "cca-realm-extensible-measurements": [
+          "JNWwopbMBcvYBoxQZ8W9Rzt3Ddpq4IL+O6MKvj+aarE=",
+          "eI/AkL/GuO2QMVK6hBTnPa9bjHux55rVAqsGmbZZ7RY=",
+          "2sRqWEFdw6ANenQYUgCOnK5k9S0DufdtdvSzZE/vxBY=",
+          "MsavxiflVYXAMVU1nzMaDiJfaEDblH3Zbvq4G+JnGTk="
+        ],
+        "cca-realm-hash-algo-id": "sha-256",
+        "cca-realm-initial-measurement": "MRMUq3NiA1DPdYg0rlxl2ejC3H/r5ufZZUu+hk4wDUk=",
+        "cca-realm-personalization-value": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIDEzIGxhenkgZG9ncy5UaGUgcXVpY2sgYnJvd24gZm94IA==",
+        "cca-realm-public-key": "BHb5iAkb5YXtQYAa7Pq4WFSMYwV+FrDmdhILvQ0vnCngVsXUGgEw65whUXiZ3CMUayjhsGK9PqSzFf0hnxy7Uoy250ykm+Fnc3NPYaHKYQMbK789kY8vlP/EIo5QkZVErg==",
+        "cca-realm-public-key-hash-algo-id": "sha-256"
+      }
+    },
+    "CCA_SSD_PLATFORM": {
+      "ear.status": "affirming"
+    }
+  }
+}

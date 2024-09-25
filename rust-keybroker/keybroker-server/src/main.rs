@@ -13,6 +13,7 @@ use keystore::KeyStore;
 mod challenge;
 mod error;
 mod keystore;
+pub mod policy;
 mod verifier;
 
 #[post("/key/{keyid}")]
@@ -90,6 +91,9 @@ async fn submit_evidence(
 
     let verifier_base = data.args.verifier.clone();
 
+    let optional_policy = data.args.policy.clone();
+    let rims = data.args.rims.clone();
+
     // We are in an async context, but the verifier client is synchronous, so spawn
     // it as a blocking task.
     let handle = task::spawn_blocking(move || {
@@ -102,6 +106,8 @@ async fn submit_evidence(
             content_type_str,
             &challenge.challenge_value,
             &evidence_bytes,
+            optional_policy,
+            &rims,
         )
     });
     let result = handle.await.unwrap();
@@ -167,6 +173,14 @@ struct Args {
     /// Set the server verbosity
     #[arg(short, long, default_value_t = false)]
     verbose: bool,
+
+    /// Rego file containing the appraisal policy for (EAR) attestation results
+    #[arg(long, default_value = None)]
+    policy: Option<String>,
+
+    /// File containing a JSON array with base64-encoded known-good RIM values
+    #[arg(long, default_value = "rims.json")]
+    rims: String,
 }
 
 struct ServerState {

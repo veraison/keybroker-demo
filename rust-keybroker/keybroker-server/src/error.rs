@@ -37,6 +37,14 @@ pub enum Error {
     /// that are transacted through the API between the client and the server, if the client provides faulty data.
     #[error(transparent)]
     Base64Decode(#[from] base64::DecodeError),
+
+    /// Represents errors from the use of the policy evaluation library.
+    #[error(transparent)]
+    Policy(#[from] anyhow::Error),
+
+    /// Represents errors from the use of the JSON serialisation and deserialisation library.
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
 }
 
 /// Errors happening within the verification process logic.
