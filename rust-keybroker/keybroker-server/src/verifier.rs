@@ -64,7 +64,7 @@ pub fn verify_with_veraison_instance(
 
     let ear_claims = serde_json::to_string(&ear)?;
 
-    let policy = policy::MEDIATYPES_TO_POLICY
+    let (policy, policy_rule) = policy::MEDIATYPES_TO_POLICY
         .get(media_type)
         .ok_or(VerificationErrorKind::PolicyNotFound)?;
 
@@ -72,7 +72,7 @@ pub fn verify_with_veraison_instance(
     // unless a custom one has been provided on the command line.  The default
     // policy also wants to match the RIM value reported by the CCA token with
     // the known-good RIM values supplied on the command line.
-    let results = policy::rego_eval(policy, reference_values, &ear_claims)?;
+    let results = policy::rego_eval(policy, policy_rule, reference_values, &ear_claims)?;
 
     Ok(results.to_string() == "true")
 }
