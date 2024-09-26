@@ -91,8 +91,7 @@ async fn submit_evidence(
 
     let verifier_base = data.args.verifier.clone();
 
-    let optional_policy = data.args.policy.clone();
-    let rims = data.args.rims.clone();
+    let reference_values = data.args.reference_values.clone();
 
     // We are in an async context, but the verifier client is synchronous, so spawn
     // it as a blocking task.
@@ -106,8 +105,7 @@ async fn submit_evidence(
             content_type_str,
             &challenge.challenge_value,
             &evidence_bytes,
-            optional_policy,
-            &rims,
+            &reference_values,
         )
     });
     let result = handle.await.unwrap();
@@ -174,13 +172,9 @@ struct Args {
     #[arg(short, long, default_value_t = false)]
     verbose: bool,
 
-    /// Rego file containing the appraisal policy for (EAR) attestation results
-    #[arg(long, default_value = None)]
-    policy: Option<String>,
-
     /// File containing a JSON array with base64-encoded known-good RIM values
-    #[arg(long, default_value = "rims.json")]
-    rims: String,
+    #[arg(long, default_value = "reference-values.json")]
+    reference_values: String,
 }
 
 struct ServerState {

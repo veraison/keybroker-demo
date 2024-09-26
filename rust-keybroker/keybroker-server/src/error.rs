@@ -53,6 +53,10 @@ pub enum VerificationErrorKind {
     /// It was not possible to find the challenge-response newSession endpoint
     #[error("No newChallengeResponseSession endpoint was found on the Veraison server.")]
     NoChallengeResponseEndpoint,
+
+    /// It was not possible to find an appraisal policy for the evidence type
+    #[error("No appraisal policy was found for the evidence type.")]
+    PolicyNotFound,
 }
 
 /// Errors happening within the key store.

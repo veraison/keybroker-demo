@@ -1,18 +1,17 @@
 // Copyright 2024 Contributors to the Veraison project.
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::error::Result;
+use phf::{phf_map, Map};
 use regorus::{self, Value};
 
-use crate::error::Result;
+pub static MEDIATYPES_TO_POLICY: Map<&'static str, &'static str> = phf_map! {
+    r#"application/eat-collection; profile="http://arm.com/CCA-SSD/1.0.0""# => include_str!("arm-cca.rego"),
+    // Other, future mappings
+};
 
 // Evaluate an EAR claims-set against the appraisal policy and known-good RIM values
-pub(crate) fn rego_eval(
-    custom_policy: Option<String>,
-    rims: &str,
-    ear_claims: &str,
-) -> Result<Value> {
-    const POLICY: &str = include_str!("policy.rego");
-
+pub(crate) fn rego_eval(policy: &str, reference_values: &str, ear_claims: &str) -> Result<Value> {
     // Create engine.
     let mut engine = regorus::Engine::new();
 
@@ -20,17 +19,10 @@ pub(crate) fn rego_eval(
     engine.set_strict_builtin_errors(false);
 
     // Add the appraisal policy
-    match custom_policy {
-        None => {
-            engine.add_policy(String::from("policy.rego"), String::from(POLICY))?;
-        }
-        Some(file) => {
-            engine.add_policy_from_file(file)?;
-        }
-    }
+    engine.add_policy(String::from("policy.rego"), String::from(policy))?;
 
     // Load the configured known good RIM values
-    engine.add_data(Value::from_json_file(rims)?)?;
+    engine.add_data(Value::from_json_file(reference_values)?)?;
 
     // Set the EAR claims-set to be appraised
     engine.set_input(Value::from_json_str(ear_claims)?);
@@ -47,9 +39,10 @@ mod tests {
     #[test]
     fn rego_eval_ear_default_policy_ok() {
         let ear_claims = include_str!("../../../testdata/ear-claims-ok.json");
-        let rims = stringify_testdata_path("rims-matching.json");
+        let reference_values = stringify_testdata_path("rims-matching.json");
 
-        let results = rego_eval(None, &rims, ear_claims).expect("successful eval");
+        let results = rego_eval(include_str!("arm-cca.rego"), &reference_values, ear_claims)
+            .expect("successful eval");
 
         assert_eq!(results.to_string(), "true");
     }
@@ -57,9 +50,10 @@ mod tests {
     #[test]
     fn rego_eval_default_policy_unmatched_rim() {
         let ear_claims = include_str!("../../../testdata/ear-claims-ok.json");
-        let rims = stringify_testdata_path("rims-not-matching.json");
+        let reference_values = stringify_testdata_path("rims-not-matching.json");
 
-        let results = rego_eval(None, &rims, ear_claims).expect("successful eval");
+        let results = rego_eval(include_str!("arm-cca.rego"), &reference_values, ear_claims)
+            .expect("successful eval");
 
         assert_eq!(results.to_string(), "false");
     }
