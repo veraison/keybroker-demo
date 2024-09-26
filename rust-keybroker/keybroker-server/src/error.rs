@@ -37,6 +37,14 @@ pub enum Error {
     /// that are transacted through the API between the client and the server, if the client provides faulty data.
     #[error(transparent)]
     Base64Decode(#[from] base64::DecodeError),
+
+    /// Represents errors from the use of the policy evaluation library.
+    #[error(transparent)]
+    Policy(#[from] anyhow::Error),
+
+    /// Represents errors from the use of the JSON serialisation and deserialisation library.
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
 }
 
 /// Errors happening within the verification process logic.
@@ -45,6 +53,10 @@ pub enum VerificationErrorKind {
     /// It was not possible to find the challenge-response newSession endpoint
     #[error("No newChallengeResponseSession endpoint was found on the Veraison server.")]
     NoChallengeResponseEndpoint,
+
+    /// It was not possible to find an appraisal policy for the evidence type
+    #[error("No appraisal policy was found for the evidence type.")]
+    PolicyNotFound,
 }
 
 /// Errors happening within the key store.
