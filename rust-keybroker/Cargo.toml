@@ -6,3 +6,24 @@ members = [
     "keybroker-server",
     "keybroker-app",
 ]
+
+[workspace.dependencies]
+actix-web = "4"
+anyhow = "1.0.89"
+base64 = "0.22.1"
+clap = { version = "=4.3.24", features = ["derive", "std"] }
+ear = { git = "https://github.com/veraison/rust-ear.git" }
+log = { version = "0.4.22", features = ["std", "serde"] }
+phf = "0.11.2"
+rand = "0.8.5"
+regorus = "0.2.5"
+reqwest = { version = "0.12.5", features = ["json", "rustls-tls", "blocking"] }
+rsa = "0.9.6"
+serde = "1.0.204"
+serde_json = "1.0.128"
+serde_with = "3.9.0"
+sha2 = "0.10.8"
+stderrlog = "0.6.0"
+thiserror = "1.0.63"
+tsm_report = { git = "https://github.com/veracruz-project/cca-utils-rs.git", rev = "cb88b76da722f2991365b159e3d575249dfbbe7d"}
+veraison-apiclient = { git = "https://github.com/veraison/rust-apiclient.git" }
