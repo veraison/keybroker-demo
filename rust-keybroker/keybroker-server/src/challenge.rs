@@ -45,7 +45,6 @@ pub struct Challenge {
 pub struct Challenger {
     challenge_table: HashMap<u32, Challenge>,
     rng: StdRng,
-    pub verbose: bool,
 }
 
 // This is the challenge value from from https://git.trustedfirmware.org/TF-M/tf-m-tools/+/refs/heads/main/iat-verifier/tests/data/cca_example_token.cbor
@@ -63,7 +62,6 @@ impl Challenger {
         Challenger {
             challenge_table: HashMap::new(),
             rng: StdRng::from_entropy(),
-            verbose: false,
         }
     }
 
@@ -101,16 +99,16 @@ impl Challenger {
 
         self.challenge_table.insert(challenge_id, challenge.clone());
 
-        if self.verbose {
-            println!("Created challenge:");
-            println!(" - challenge_id: {}", challenge_id);
-            println!(" - key_id: {}", challenge.key_id);
-            println!(
-                " - challenge value ({} bytes): {:02x?}",
-                challenge.challenge_value.len(),
-                challenge.challenge_value
-            );
-        }
+        log::info!(
+            "Created challenge:\n\
+              - challenge_id: {}\n\
+              - key_id: {}\n\
+              - challenge value ({} bytes): {:02x?}",
+            challenge_id,
+            challenge.key_id,
+            challenge.challenge_value.len(),
+            challenge.challenge_value
+        );
 
         challenge
     }

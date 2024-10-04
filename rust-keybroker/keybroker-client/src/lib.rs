@@ -18,7 +18,7 @@ use crate::error::RuntimeErrorKind;
 /// The trait that must be implemented so a KeybrokerClient can retrieve the evidence it has
 /// to submit to the Keybroker server.
 pub trait EvidenceProvider {
-    fn get_evidence(&self, challenge: &str, verbose: bool) -> Result<Vec<u8>>;
+    fn get_evidence(&self, challenge: &str) -> Result<Vec<u8>>;
 }
 
 /// The CCA example token.
@@ -164,7 +164,7 @@ const CCA_EXAMPLE_TOKEN: &[u8] = &[
 pub struct CcaExampleToken {}
 
 impl EvidenceProvider for CcaExampleToken {
-    fn get_evidence(&self, _challenge: &str, _verbose: bool) -> Result<Vec<u8>> {
+    fn get_evidence(&self, _challenge: &str) -> Result<Vec<u8>> {
         Ok(CCA_EXAMPLE_TOKEN.to_vec())
     }
 }
@@ -177,13 +177,11 @@ impl EvidenceProvider for CcaExampleToken {
 pub struct TsmAttestationReport {}
 
 impl EvidenceProvider for TsmAttestationReport {
-    fn get_evidence(&self, challenge: &str, verbose: bool) -> Result<Vec<u8>> {
+    fn get_evidence(&self, challenge: &str) -> Result<Vec<u8>> {
         match TsmReportPath::new(TsmReportProvider::Cca) {
             Ok(tsm_report_path) => match URL_SAFE_NO_PAD.decode(challenge) {
                 Ok(challenge) => {
-                    if verbose {
-                        println!("Challenge ({} bytes) = {:02x?}", challenge.len(), challenge);
-                    }
+                    log::info!("Challenge ({} bytes) = {:02x?}", challenge.len(), challenge);
                     if challenge.len() != 64 {
                         return Err(KeybrokerError::RuntimeError(
                             RuntimeErrorKind::ChallengeLength(64, challenge.len()),
@@ -225,22 +223,14 @@ pub struct KeyBrokerClient {
 
     /// The keybroker URL base address.
     keybroker_url_base: String,
-
-    /// The session verbosity.
-    ///
-    /// The verbose flag serves 2 purposes: help the developer when diagnosing some
-    /// issue, but also the new comer to the code base when understanding the overall
-    /// flow is intended.
-    verbose: bool,
 }
 
 impl KeyBrokerClient {
     /// Create a session to the keybroker server located at addr:port.
-    pub fn new(endpoint: &str, verbose: bool) -> KeyBrokerClient {
+    pub fn new(endpoint: &str) -> KeyBrokerClient {
         KeyBrokerClient {
             client: reqwest::blocking::Client::new(),
             keybroker_url_base: endpoint.to_string(),
-            verbose,
         }
     }
 
@@ -269,11 +259,9 @@ impl KeyBrokerClient {
         // Construct the URL to request the key.
         let key_request_url = format!("{}/keys/v1/key/{}", self.keybroker_url_base, key_name);
 
-        if self.verbose {
-            println!(
-                "Requesting key named '{key_name}' from the keybroker server with URL {key_request_url}"
-            );
-        }
+        log::info!(
+            "Requesting key named '{key_name}' from the keybroker server with URL {key_request_url}"
+        );
 
         // Make the first API call to request the key.
         match self.client.post(&key_request_url).json(&key_request).send() {
@@ -318,9 +306,7 @@ impl KeyBrokerClient {
         evidence_submission_url: &str,
         evidence: &[u8],
     ) -> Result<Vec<u8>> {
-        if self.verbose {
-            println!("Submitting evidence to URL {evidence_submission_url}")
-        }
+        log::info!("Submitting evidence to URL {evidence_submission_url}");
 
         // Make the second API call to submit the evidence.
         match self
@@ -411,7 +397,7 @@ impl KeyBrokerClient {
         };
 
         // Produce the evidence.
-        let evidence = match evidence_provider.get_evidence(&data.challenge, self.verbose) {
+        let evidence = match evidence_provider.get_evidence(&data.challenge) {
             Ok(evidence) => evidence,
             Err(error) => {
                 // TODO: we may want to notify the keybroker server that something went wrong on our side and that it

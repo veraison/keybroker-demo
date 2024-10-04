@@ -13,8 +13,10 @@ categories = ["cryptography", "hardware-support"]
 [dependencies]
 keybroker-common = { path = "../keybroker-common" }
 base64 = "0.22.1"
+log = { version = "0.4.22", features = ["std", "serde"] }
 rand = "0.8.5"
 reqwest = { version = "0.12.5", features = ["json", "rustls-tls", "blocking"] }
 rsa = "0.9.6"
+stderrlog = "0.6.0"
 thiserror = "1.0"
 tsm_report = { git = "https://github.com/veracruz-project/cca-utils-rs.git", rev = "cb88b76da722f2991365b159e3d575249dfbbe7d"}
