@@ -18,9 +18,13 @@ struct Args {
     #[arg(short, long, default_value_t = false)]
     mock_evidence: bool,
 
-    /// Set the application verbosity
+    /// Increase verbosity
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    verbosity: u8,
+
+    /// Silence all output
     #[arg(short, long, default_value_t = false)]
-    verbose: bool,
+    quiet: bool,
 
     /// The key name to use
     key_name: String,
@@ -29,7 +33,13 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let client = KeyBrokerClient::new(&args.endpoint, args.verbose);
+    stderrlog::new()
+        .quiet(args.quiet)
+        .verbosity(1 + usize::from(args.verbosity))
+        .init()
+        .unwrap();
+
+    let client = KeyBrokerClient::new(&args.endpoint);
 
     let attestation_result = if args.mock_evidence {
         client.get_key(&args.key_name, &CcaExampleToken {})
@@ -43,16 +53,16 @@ fn main() {
     let code = match attestation_result {
         Ok(key) => {
             let plainstring_key = String::from_utf8(key).unwrap();
-            println!("Attestation success :-) ! The key returned from the keybroker is '{plainstring_key}'");
+            log::info!("Attestation success :-) ! The key returned from the keybroker is '{plainstring_key}'");
             0
         }
 
         Err(error) => {
             if let KeybrokerError::AttestationFailure(reason, details) = error {
-                println!("Attestation failure :-( ! {reason}: {details}");
+                log::info!("Attestation failure :-( ! {reason}: {details}");
                 1
             } else {
-                eprintln!("The key request failed with: {error:?}");
+                log::error!("The key request failed with: {error:?}");
                 2
             }
         }

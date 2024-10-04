@@ -42,9 +42,7 @@ async fn request_key(
         data.endpoint, challenge.challenge_id
     );
 
-    if data.args.verbose {
-        println!("Created attestation challenge at {}", location);
-    }
+    log::info!("Created attestation challenge at {}", location);
 
     HttpResponse::Created()
         .append_header((http::header::LOCATION, location))
@@ -168,9 +166,13 @@ struct Args {
     #[arg(short, long, default_value_t = false)]
     mock_challenge: bool,
 
-    /// Set the server verbosity
+    /// Increase verbosity
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    verbosity: u8,
+
+    /// Silence all output
     #[arg(short, long, default_value_t = false)]
-    verbose: bool,
+    quiet: bool,
 
     /// File containing a JSON array with base64-encoded known-good RIM values
     #[arg(long, default_value = "reference-values.json")]
@@ -188,9 +190,14 @@ struct ServerState {
 async fn main() -> std::io::Result<()> {
     let args = Args::parse();
 
+    stderrlog::new()
+        .quiet(args.quiet)
+        .verbosity(1 + usize::from(args.verbosity))
+        .init()
+        .unwrap();
+
     let mut keystore = KeyStore::new();
-    let mut challenger = Challenger::new();
-    challenger.verbose = args.verbose;
+    let challenger = Challenger::new();
 
     // TODO: Just storing one hard-coded item in the store. Would be better to read from an input file.
     keystore.store_key(
