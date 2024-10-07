@@ -68,7 +68,7 @@ values).
 In a terminal, start `keybroker-server` with:
 
 ```console
-$ target/debug/keybroker-server -v -m --reference-values ../testdata/rims-matching.json
+$ target/debug/keybroker-server -v -m --reference-values <(echo '{ "reference-values": [ "MRMUq3NiA1DPdYg0rlxl2ejC3H/r5ufZZUu+hk4wDUk=" ] }')
 INFO starting 11 workers
 INFO Actix runtime found; starting in Actix runtime
 INFO starting service: "actix-web-service-127.0.0.1:8088", workers: 11, listening on: 127.0.0.1:8088
