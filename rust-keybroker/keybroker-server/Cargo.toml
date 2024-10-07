@@ -11,20 +11,20 @@ keywords = ["security", "service", "attestation"]
 categories = ["cryptography", "hardware-support"]
 
 [dependencies]
-actix-web = "4"
-base64 = "0.22.1"
-thiserror = "1.0.63"
-serde = "1.0.204"
-rsa = "0.9.6"
-sha2 = "0.10.8"
-rand = "0.8.5"
-clap = { version = "=4.3.24", features = ["derive", "std"] }
 keybroker-common = { path = "../keybroker-common" }
-veraison-apiclient = { git = "https://github.com/veraison/rust-apiclient.git" }
-ear = { git = "https://github.com/veraison/rust-ear.git" }
-regorus = "0.2.5"
-serde_json = "1.0.128"
-anyhow = "1.0.89"
-phf = "0.11.2"
-log = { version = "0.4.22", features = ["std", "serde"] }
-stderrlog = "0.6.0"
+actix-web.workspace = true
+anyhow.workspace = true
+base64.workspace = true
+clap.workspace = true
+ear.workspace = true
+log.workspace = true
+phf.workspace = true
+rand.workspace = true
+regorus.workspace = true
+rsa.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+stderrlog.workspace = true
+thiserror.workspace = true
+veraison-apiclient.workspace = true

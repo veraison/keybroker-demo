@@ -12,6 +12,6 @@ categories = ["cryptography", "hardware-support"]
 
 [dependencies]
 keybroker-client = { path = "../keybroker-client" }
-clap = { version = "=4.3.24", features = ["derive", "std"] }
-log = { version = "0.4.22", features = ["std", "serde"] }
-stderrlog = "0.6.0"
+clap.workspace = true
+log.workspace = true
+stderrlog.workspace = true

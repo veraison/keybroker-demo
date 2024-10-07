@@ -11,5 +11,5 @@ keywords = ["security", "service", "attestation"]
 categories = ["cryptography", "hardware-support"]
 
 [dependencies]
-serde = { version = "1.0.204", features = ["serde_derive"] }
-serde_with = "3.9.0"
+serde.workspace = true
+serde_with.workspace = true
