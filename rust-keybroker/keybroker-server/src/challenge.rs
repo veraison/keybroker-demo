@@ -99,17 +99,6 @@ impl Challenger {
 
         self.challenge_table.insert(challenge_id, challenge.clone());
 
-        log::info!(
-            "Created challenge:\n\
-              - challenge_id: {}\n\
-              - key_id: {}\n\
-              - challenge value ({} bytes): {:02x?}",
-            challenge_id,
-            challenge.key_id,
-            challenge.challenge_value.len(),
-            challenge.challenge_value
-        );
-
         challenge
     }
 

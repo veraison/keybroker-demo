@@ -42,7 +42,17 @@ async fn request_key(
         data.endpoint, challenge.challenge_id
     );
 
-    log::info!("Created attestation challenge at {}", location);
+    log::info!(
+        "Created attestation challenge at {}:\n\
+          - challenge_id: {}\n\
+          - key_id: {}\n\
+          - challenge value ({} bytes): {:02x?}",
+        location,
+        challenge.challenge_id,
+        challenge.key_id,
+        challenge.challenge_value.len(),
+        challenge.challenge_value
+    );
 
     HttpResponse::Created()
         .append_header((http::header::LOCATION, location))
@@ -69,6 +79,7 @@ async fn submit_evidence(
                 detail: "The challenge identifier did not match any issued challenge.".to_string(),
             };
 
+            log::info!("Evidence submitted for challenge {challenge_id}: it does not match any issued challenge.");
             return HttpResponse::Forbidden().json(error_info);
         }
 
@@ -118,6 +129,10 @@ async fn submit_evidence(
                 // TODO: Error checks - can't just unwrap here
                 let wrapped_key = data.unwrap();
 
+                log::info!(
+                    "Evidence submitted for challenge {}: verification succeeded !",
+                    challenge.challenge_id
+                );
                 HttpResponse::Ok().json(wrapped_key)
             } else {
                 let error_info = ErrorInformation {
@@ -125,15 +140,24 @@ async fn submit_evidence(
                     detail: "The attestation result is not in policy.".to_string(),
                 };
 
+                log::info!(
+                    "Evidence submitted for challenge {}: the attestation result is not in policy.",
+                    challenge.challenge_id
+                );
                 HttpResponse::Forbidden().json(error_info)
             }
         }
-        Err(_) => {
+        Err(error) => {
             let error_info = ErrorInformation {
                 r#type: "AttestationFailure".to_string(),
-                detail: "No attestation result was obtained.".to_string(),
+                detail: format!("No attestation result was obtained. {}", error),
             };
 
+            log::info!(
+                "Evidence submitted for challenge {}: no attestation result was obtained. {}",
+                challenge.challenge_id,
+                error
+            );
             HttpResponse::Forbidden().json(error_info)
         }
     }
