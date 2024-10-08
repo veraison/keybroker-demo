@@ -19,7 +19,7 @@ rand = "0.8.5"
 regorus = "0.2.5"
 reqwest = { version = "0.12.5", features = ["json", "rustls-tls", "blocking"] }
 rsa = "0.9.6"
-serde = "1.0.204"
+serde = { version = "1.0.204", features = ["derive"] }
 serde_json = "1.0.128"
 serde_with = "3.9.0"
 sha2 = "0.10.8"
