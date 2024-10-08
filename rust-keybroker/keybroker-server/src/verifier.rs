@@ -1,7 +1,7 @@
 // Copyright 2024 Contributors to the Veraison project.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::error::{Result, VerificationErrorKind};
+use crate::error::{Error, Result, VerificationErrorKind};
 use crate::policy;
 use ear::{Algorithm, Ear};
 use veraison_apiclient::*;
@@ -11,7 +11,7 @@ pub fn verify_with_veraison_instance(
     media_type: &str,
     challenge: &[u8],
     evidence: &[u8],
-    reference_values: &str,
+    reference_values: &Option<String>,
 ) -> Result<bool> {
     // Get the discovery URL from the base URL
     let discovery = Discovery::from_base_url(String::from(verifier_base_url))?;
@@ -23,8 +23,8 @@ pub fn verify_with_veraison_instance(
     let relative_endpoint = verification_api.get_api_endpoint("newChallengeResponseSession");
 
     if relative_endpoint.is_none() {
-        return Err(crate::error::Error::Verification(
-            crate::error::VerificationErrorKind::NoChallengeResponseEndpoint,
+        return Err(Error::Verification(
+            VerificationErrorKind::NoChallengeResponseEndpoint,
         ));
     }
 
@@ -68,11 +68,22 @@ pub fn verify_with_veraison_instance(
         .get(media_type)
         .ok_or(VerificationErrorKind::PolicyNotFound)?;
 
+    if reference_values.is_none() {
+        return Err(Error::Verification(
+            VerificationErrorKind::NoReferenceValues,
+        ));
+    }
+
     // Appraise the received EAR using the embedded policy (see ./policy.rego)
     // unless a custom one has been provided on the command line.  The default
     // policy also wants to match the RIM value reported by the CCA token with
     // the known-good RIM values supplied on the command line.
-    let results = policy::rego_eval(policy, policy_rule, reference_values, &ear_claims)?;
+    let results = policy::rego_eval(
+        policy,
+        policy_rule,
+        reference_values.as_ref().unwrap(),
+        &ear_claims,
+    )?;
 
     Ok(results.to_string() == "true")
 }

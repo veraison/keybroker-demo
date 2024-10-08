@@ -198,9 +198,9 @@ struct Args {
     #[arg(short, long, default_value_t = false)]
     quiet: bool,
 
-    /// File containing a JSON array with base64-encoded known-good RIM values
-    #[arg(long, default_value = "reference-values.json")]
-    reference_values: String,
+    /// File containing a JSON array with base64-encoded known-good reference values
+    #[arg(long, default_value = None)]
+    reference_values: Option<String>,
 }
 
 struct ServerState {
