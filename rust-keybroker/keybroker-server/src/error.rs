@@ -57,6 +57,10 @@ pub enum VerificationErrorKind {
     /// It was not possible to find an appraisal policy for the evidence type
     #[error("No appraisal policy was found for the evidence type.")]
     PolicyNotFound,
+
+    /// There are no known-good reference values
+    #[error("No known-good reference values.")]
+    NoReferenceValues,
 }
 
 /// Errors happening within the key store.
