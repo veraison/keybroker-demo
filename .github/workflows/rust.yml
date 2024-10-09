@@ -27,3 +27,7 @@ jobs:
       run: cargo build --manifest-path=rust-keybroker/Cargo.toml --verbose
     - name: Run tests
       run: cargo test --manifest-path=rust-keybroker/Cargo.toml --verbose
+    - name: Install keybroker-app
+      run: cargo install --path=rust-keybroker/keybroker-app --root $RUNNER_TEMP/keybroker-demo
+    - name: Install keybroker-server
+      run: cargo install --path=rust-keybroker/keybroker-server --root $RUNNER_TEMP/keybroker-demo
