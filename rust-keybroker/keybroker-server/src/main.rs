@@ -10,6 +10,7 @@ use challenge::Challenger;
 use clap::Parser;
 use keybroker_common::{AttestationChallenge, BackgroundCheckKeyRequest, ErrorInformation};
 use keystore::KeyStore;
+use verifier::CcaDiagnostics;
 mod challenge;
 mod error;
 mod keystore;
@@ -112,9 +113,11 @@ async fn submit_evidence(
         verifier::verify_with_veraison_instance(
             &verifier_base,
             content_type_str,
+            &challenge.challenge_id,
             &challenge.challenge_value,
             &evidence_bytes,
             &reference_values,
+            &CcaDiagnostics {},
         )
     });
     let result = handle.await.unwrap();
