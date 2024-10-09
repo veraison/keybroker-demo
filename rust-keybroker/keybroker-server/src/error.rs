@@ -61,6 +61,10 @@ pub enum VerificationErrorKind {
     /// There are no known-good reference values
     #[error("No known-good reference values.")]
     NoReferenceValues,
+
+    /// Represents errors in the CCA flavor of an EAR
+    #[error("EAR/CCA error: {0}")]
+    EARCCAError(String),
 }
 
 /// Errors happening within the key store.
