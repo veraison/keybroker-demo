@@ -121,7 +121,7 @@ pub fn verify_with_veraison_instance<DE: EmitDiagnostic>(
     // Appraise the received EAR using the embedded policy (see ./policy.rego)
     // unless a custom one has been provided on the command line.  The default
     // policy also wants to match the RIM value reported by the CCA token with
-    // the known-good RIM values supplied on the command line.
+    // the known-good reference values supplied on the command line.
     let results = policy::rego_eval(
         policy,
         policy_rule,
