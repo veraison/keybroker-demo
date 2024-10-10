@@ -10,7 +10,7 @@ pub static MEDIATYPES_TO_POLICY: Map<&'static str, (&'static str, &'static str)>
     // Other, future mappings
 };
 
-// Evaluate an EAR claims-set against the appraisal policy and known-good RIM values
+// Evaluate an EAR claims-set against the appraisal policy and known-good reference values
 pub(crate) fn rego_eval(
     policy: &str,
     policy_rule: &str,
@@ -26,7 +26,7 @@ pub(crate) fn rego_eval(
     // Add the appraisal policy
     engine.add_policy(String::from("policy.rego"), String::from(policy))?;
 
-    // Load the configured known good RIM values
+    // Load the configured known-good reference values
     engine.add_data(Value::from_json_file(reference_values)?)?;
 
     // Set the EAR claims-set to be appraised
