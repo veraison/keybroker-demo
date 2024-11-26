@@ -100,8 +100,8 @@ async fn submit_evidence(
     let evidence_bytes = URL_SAFE_NO_PAD.decode(evidence_base64).unwrap(); // TODO: Error handling needed here in case of faulty base64 input
 
     let verifier_base = data.args.verifier.clone();
-
     let reference_values = data.args.reference_values.clone();
+    let verbosity = data.args.verbosity;
 
     // We are in an async context, but the verifier client is synchronous, so spawn
     // it as a blocking task.
@@ -117,7 +117,7 @@ async fn submit_evidence(
             &challenge.challenge_value,
             &evidence_bytes,
             &reference_values,
-            &CcaDiagnostics {},
+            &CcaDiagnostics::new(verbosity),
         )
     });
     let result = handle.await.unwrap();

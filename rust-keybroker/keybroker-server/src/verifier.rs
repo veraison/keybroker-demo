@@ -9,10 +9,19 @@ use veraison_apiclient::*;
 /// The trait that must be implemented to emit diagnostics for specific flavours of EAR.
 pub trait EmitDiagnostic {
     fn emit_no_reference_values(&self, challenge_id: &u32, ear: &Ear) -> Result<()>;
+    fn verbosity(&self) -> u8;
 }
 
 /// Provide diagnostics for the CCA flavour of EAR.
-pub struct CcaDiagnostics {}
+pub struct CcaDiagnostics {
+    verbosity: u8,
+}
+
+impl CcaDiagnostics {
+    pub fn new(verbosity: u8) -> Self {
+        Self { verbosity }
+    }
+}
 
 impl EmitDiagnostic for CcaDiagnostics {
     fn emit_no_reference_values(&self, challenge_id: &u32, ear: &Ear) -> Result<()> {
@@ -42,6 +51,10 @@ impl EmitDiagnostic for CcaDiagnostics {
                 Ok(())
             }
         }
+    }
+
+    fn verbosity(&self) -> u8 {
+        self.verbosity
     }
 }
 
@@ -102,6 +115,26 @@ pub fn verify_with_veraison_instance<DE: EmitDiagnostic>(
         Algorithm::ES256,
         verification_key_string.as_bytes(),
     )?;
+
+    if diagnostics.verbosity() > 0 {
+        let mut ear_log = format!("EAR profiles: {}\n", ear.profile);
+
+        // Walk the sub-modules and log their appraisal status
+        for (module, appraisal) in ear.submods.iter() {
+            ear_log.push_str(format!("Appraisal for submod {}:\n", module).as_str());
+            ear_log.push_str(format!("    Status: {:?}\n", appraisal.status).as_str());
+            ear_log.push_str("    Annotated Evidence:\n");
+            for (ek, ev) in appraisal.annotated_evidence.iter() {
+                ear_log.push_str(format!("        {}: {:?}\n", ek, ev).as_str());
+            }
+            ear_log.push_str("    Policy Claims:\n");
+            for (pk, pv) in appraisal.policy_claims.iter() {
+                ear_log.push_str(format!("        {}: {:?}\n", pk, pv).as_str());
+            }
+        }
+
+        log::info!("{}", ear_log);
+    }
 
     let ear_claims = serde_json::to_string(&ear)?;
 
