@@ -99,6 +99,18 @@ async fn submit_evidence(
 
     let evidence_bytes = URL_SAFE_NO_PAD.decode(evidence_base64).unwrap(); // TODO: Error handling needed here in case of faulty base64 input
 
+    // Optionally dump the evidence to file.
+    // This can be useful for debugging or for educational purpose for example.
+    if data.args.dump_evidence_cbor {
+        let filename = format!("evidence-{challenge_id}.cbor");
+        match std::fs::write(&filename, &evidence_bytes) {
+            Ok(()) => log::info!("Evidence for challenge {challenge_id} dumped to file {filename}"),
+            Err(e) => log::error!(
+                "Failed to dump evidence for challenge {challenge_id} to file {filename}: {e}"
+            ),
+        }
+    }
+
     let verifier_base = data.args.verifier.clone();
     let reference_values = data.args.reference_values.clone();
     let verbosity = data.args.verbosity;
@@ -192,6 +204,10 @@ struct Args {
     /// Use the static CCA example token nonce instead of a randomly generated one
     #[arg(short, long, default_value_t = false)]
     mock_challenge: bool,
+
+    /// Dump evidence to file 'evidence-{challenge_id}.cbor'
+    #[arg(long, default_value_t = false)]
+    dump_evidence_cbor: bool,
 
     /// Increase verbosity
     #[arg(short, long, action = clap::ArgAction::Count)]
