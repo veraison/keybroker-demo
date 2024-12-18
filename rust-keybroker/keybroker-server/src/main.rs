@@ -10,7 +10,8 @@ use challenge::Challenger;
 use clap::Parser;
 use keybroker_common::{AttestationChallenge, BackgroundCheckKeyRequest, ErrorInformation};
 use keystore::KeyStore;
-use verifier::CcaDiagnostics;
+use std::path::PathBuf;
+use verifier::{CcaDiagnostics, Verifier};
 mod challenge;
 mod error;
 mod keystore;
@@ -111,7 +112,10 @@ async fn submit_evidence(
         }
     }
 
-    let verifier_base = data.args.verifier.clone();
+    let verifier = Verifier {
+        base_url: data.args.verifier.clone(),
+        root_certificate: data.args.verifier_root_certificate.clone(),
+    };
     let reference_values = data.args.reference_values.clone();
     let verbosity = data.args.verbosity;
 
@@ -123,7 +127,7 @@ async fn submit_evidence(
 
         // TODO: Blind pass-through of content type here. Ideally we should do a friendly check against the set that Veraison supports.
         verifier::verify_with_veraison_instance(
-            &verifier_base,
+            &verifier,
             content_type_str,
             &challenge.challenge_id,
             &challenge.challenge_value,
@@ -198,8 +202,12 @@ struct Args {
     endpoint: Option<String>,
 
     /// The URL where the verifier can be reached
-    #[arg(long, default_value = "http://veraison.test.linaro.org:8080")]
+    #[arg(long, default_value = "https://veraison.test.linaro.org:8443")]
     verifier: String,
+
+    /// Optional verifier's custom root certificate to use for the TLS connection
+    #[arg(long, default_value = None)]
+    verifier_root_certificate: Option<PathBuf>,
 
     /// Use the static CCA example token nonce instead of a randomly generated one
     #[arg(short, long, default_value_t = false)]

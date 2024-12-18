@@ -4,6 +4,7 @@
 use crate::error::{Error, Result, VerificationErrorKind};
 use crate::policy;
 use ear::{Algorithm, Ear};
+use std::path::PathBuf;
 use veraison_apiclient::*;
 
 /// The trait that must be implemented to emit diagnostics for specific flavours of EAR.
@@ -58,8 +59,13 @@ impl EmitDiagnostic for CcaDiagnostics {
     }
 }
 
+pub struct Verifier {
+    pub base_url: String,
+    pub root_certificate: Option<PathBuf>,
+}
+
 pub fn verify_with_veraison_instance<DE: EmitDiagnostic>(
-    verifier_base_url: &str,
+    verifier: &Verifier,
     media_type: &str,
     challenge_id: &u32,
     challenge: &[u8],
@@ -67,11 +73,17 @@ pub fn verify_with_veraison_instance<DE: EmitDiagnostic>(
     reference_values: &Option<String>,
     diagnostics: &DE,
 ) -> Result<bool> {
-    // Get the discovery URL from the base URL
-    let discovery = Discovery::from_base_url(String::from(verifier_base_url))?;
+    // Get the discovery endpoint.
+    let mut discovery = DiscoveryBuilder::new().with_base_url(verifier.base_url.clone());
+
+    if verifier.root_certificate.is_some() {
+        discovery = discovery.with_root_certificate(verifier.root_certificate.clone().unwrap());
+    }
+
+    let discovery_endpoint = discovery.build()?;
 
     // Quiz the discovery endpoint for the verification endpoint
-    let verification_api = discovery.get_verification_api()?;
+    let verification_api = discovery_endpoint.get_verification_api()?;
 
     // Get the challenge-response endpoint from the verification endpoint
     let relative_endpoint = verification_api.get_api_endpoint("newChallengeResponseSession");
@@ -85,12 +97,16 @@ pub fn verify_with_veraison_instance<DE: EmitDiagnostic>(
     // Can't panic now
     let relative_endpoint = relative_endpoint.unwrap();
 
-    let api_endpoint = format!("{}{}", verifier_base_url, relative_endpoint);
+    let api_endpoint = format!("{}{}", verifier.base_url, relative_endpoint);
 
-    // create a ChallengeResponse object
-    let cr = ChallengeResponseBuilder::new()
-        .with_new_session_url(api_endpoint)
-        .build()?;
+    // create a ChallengeResponse object.
+    let mut crb = ChallengeResponseBuilder::new().with_new_session_url(api_endpoint);
+
+    if verifier.root_certificate.is_some() {
+        crb = crb.with_root_certificate(verifier.root_certificate.clone().unwrap());
+    }
+
+    let cr = crb.build()?;
 
     let nonce = Nonce::Value(challenge.to_vec());
 
