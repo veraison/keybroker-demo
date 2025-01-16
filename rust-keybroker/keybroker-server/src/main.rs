@@ -119,26 +119,23 @@ async fn submit_evidence(
     let reference_values = data.args.reference_values.clone();
     let verbosity = data.args.verbosity;
 
-    // We are in an async context, but the verifier client is synchronous, so spawn
-    // it as a blocking task.
-    let handle = task::spawn_blocking(move || {
-        // TODO: In theory, this unwrap() could fail and panic if there are non-printing characters in the content type header.
-        let content_type_str = content_type.to_str().unwrap();
+    // TODO: In theory, this unwrap() could fail and panic if there are non-printing characters in the content type header.
+    let content_type_str = content_type.to_str().unwrap();
 
-        // TODO: Blind pass-through of content type here. Ideally we should do a friendly check against the set that Veraison supports.
-        verifier::verify_with_veraison_instance(
-            &verifier,
-            content_type_str,
-            &challenge.challenge_id,
-            &challenge.challenge_value,
-            &evidence_bytes,
-            &reference_values,
-            &CcaDiagnostics::new(verbosity),
-        )
-    });
-    let result = handle.await.unwrap();
+    let cca_diagnostic = CcaDiagnostics::new(verbosity);
 
-    match result {
+    // TODO: Blind pass-through of content type here. Ideally we should do a friendly check against the set that Veraison supports.
+    let result = verifier::verify_with_veraison_instance(
+        &verifier,
+        content_type_str,
+        &challenge.challenge_id,
+        &challenge.challenge_value,
+        &evidence_bytes,
+        &reference_values,
+        &cca_diagnostic,
+    );
+
+    match result.await {
         Ok(verified) => {
             // Switch on whether the evidence was successfully verified or not.
             if verified {

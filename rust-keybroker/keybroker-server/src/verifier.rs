@@ -64,7 +64,7 @@ pub struct Verifier {
     pub root_certificate: Option<PathBuf>,
 }
 
-pub fn verify_with_veraison_instance<DE: EmitDiagnostic>(
+pub async fn verify_with_veraison_instance<DE: EmitDiagnostic>(
     verifier: &Verifier,
     media_type: &str,
     challenge_id: &u32,
@@ -83,7 +83,7 @@ pub fn verify_with_veraison_instance<DE: EmitDiagnostic>(
     let discovery_endpoint = discovery.build()?;
 
     // Quiz the discovery endpoint for the verification endpoint
-    let verification_api = discovery_endpoint.get_verification_api()?;
+    let verification_api = discovery_endpoint.get_verification_api().await?;
 
     // Get the challenge-response endpoint from the verification endpoint
     let relative_endpoint = verification_api.get_api_endpoint("newChallengeResponseSession");
@@ -110,10 +110,12 @@ pub fn verify_with_veraison_instance<DE: EmitDiagnostic>(
 
     let nonce = Nonce::Value(challenge.to_vec());
 
-    let (session_url, _session) = cr.new_session(&nonce)?;
+    let (session_url, _session) = cr.new_session(&nonce).await?;
 
     // Run the challenge-response session
-    let ear_string = cr.challenge_response(evidence, media_type, &session_url)?;
+    let ear_string = cr
+        .challenge_response(evidence, media_type, &session_url)
+        .await?;
 
     // EARs are signed by Veraison. The public verification key is conveyed within the
     // endpoint descriptor that we pulled from the discovery API before. We can grab this
