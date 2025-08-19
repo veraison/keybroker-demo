@@ -27,7 +27,7 @@ pub(crate) fn rego_eval(
     engine.add_policy(String::from("policy.rego"), String::from(policy))?;
 
     // Load the configured known-good reference values
-    engine.add_data(Value::from_json_file(reference_values)?)?;
+    engine.add_data(Value::from_json_str(reference_values)?)?;
 
     // Set the EAR claims-set to be appraised
     engine.set_input(Value::from_json_str(ear_claims)?);
@@ -44,12 +44,12 @@ mod tests {
     #[test]
     fn rego_eval_ear_default_policy_ok() {
         let ear_claims = include_str!("../../../testdata/ear-claims-ok.json");
-        let reference_values = stringify_testdata_path("rims-matching.json");
+        let reference_values = include_str!("../../../testdata/rims-matching.json");
 
         let results = rego_eval(
             include_str!("arm-cca.rego"),
             "data.arm_cca.allow",
-            &reference_values,
+            reference_values,
             ear_claims,
         )
         .expect("successful eval");
@@ -60,25 +60,16 @@ mod tests {
     #[test]
     fn rego_eval_default_policy_unmatched_rim() {
         let ear_claims = include_str!("../../../testdata/ear-claims-ok.json");
-        let reference_values = stringify_testdata_path("rims-not-matching.json");
+        let reference_values = include_str!("../../../testdata/rims-not-matching.json");
 
         let results = rego_eval(
             include_str!("arm-cca.rego"),
             "data.arm_cca.allow",
-            &reference_values,
+            reference_values,
             ear_claims,
         )
         .expect("successful eval");
 
         assert_eq!(results.to_string(), "false");
-    }
-
-    fn stringify_testdata_path(s: &str) -> String {
-        let mut test_data = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-
-        test_data.push("../../testdata");
-        test_data.push(s);
-
-        test_data.into_os_string().into_string().unwrap()
     }
 }
