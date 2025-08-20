@@ -1,6 +1,8 @@
 // Copyright 2024 Contributors to the Veraison project.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::fs;
+use std::path::Path;
 use std::sync::Mutex;
 
 use actix_web::{http, post, rt::task, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
@@ -182,6 +184,13 @@ async fn submit_evidence(
     }
 }
 
+/// Reads the entire contents of the file at path into a string.
+/// This is basically a wrapper around the standard library's `fs::read_to_string` function so it
+/// can be used as a value parser in the command-line arguments.
+fn read_file_to_string(path: &str) -> Result<String, String> {
+    fs::read_to_string(Path::new(path)).map_err(|e| format!("failed to read {}: {}", path, e))
+}
+
 /// Structure for parsing and storing the command-line arguments
 #[derive(Clone, Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -226,7 +235,7 @@ struct Args {
     quiet: bool,
 
     /// File containing a JSON array with base64-encoded known-good reference values
-    #[arg(long, default_value = None)]
+    #[arg(long, default_value = None, value_parser = read_file_to_string, value_hint = clap::ValueHint::FilePath)]
     reference_values: Option<String>,
 }
 
