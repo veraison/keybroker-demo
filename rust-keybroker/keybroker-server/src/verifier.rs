@@ -5,7 +5,7 @@ use crate::error::{Error, Result, VerificationErrorKind};
 use crate::policy;
 use ear::{Algorithm, Ear};
 use std::path::PathBuf;
-use veraison_apiclient::*;
+use veraison_apiclient::{http::ConfigureHttp, *};
 
 /// The trait that must be implemented to emit diagnostics for specific flavours of EAR.
 pub trait EmitDiagnostic {
@@ -62,9 +62,10 @@ impl EmitDiagnostic for CcaDiagnostics {
 pub struct Verifier {
     pub base_url: String,
     pub root_certificate: Option<PathBuf>,
+    pub no_check_certificate: bool,
 }
 
-pub fn verify_with_veraison_instance<DE: EmitDiagnostic>(
+pub async fn verify_with_veraison_instance<DE: EmitDiagnostic>(
     verifier: &Verifier,
     media_type: &str,
     challenge_id: &u32,
@@ -76,14 +77,16 @@ pub fn verify_with_veraison_instance<DE: EmitDiagnostic>(
     // Get the discovery endpoint.
     let mut discovery = DiscoveryBuilder::new().with_base_url(verifier.base_url.clone());
 
-    if verifier.root_certificate.is_some() {
+    if verifier.no_check_certificate {
+        discovery = discovery.no_check_certificate();
+    } else if verifier.root_certificate.is_some() {
         discovery = discovery.with_root_certificate(verifier.root_certificate.clone().unwrap());
     }
 
     let discovery_endpoint = discovery.build()?;
 
     // Quiz the discovery endpoint for the verification endpoint
-    let verification_api = discovery_endpoint.get_verification_api()?;
+    let verification_api = discovery_endpoint.get_verification_api().await?;
 
     // Get the challenge-response endpoint from the verification endpoint
     let relative_endpoint = verification_api.get_api_endpoint("newChallengeResponseSession");
@@ -102,7 +105,9 @@ pub fn verify_with_veraison_instance<DE: EmitDiagnostic>(
     // create a ChallengeResponse object.
     let mut crb = ChallengeResponseBuilder::new().with_new_session_url(api_endpoint);
 
-    if verifier.root_certificate.is_some() {
+    if verifier.no_check_certificate {
+        crb = crb.no_check_certificate();
+    } else if verifier.root_certificate.is_some() {
         crb = crb.with_root_certificate(verifier.root_certificate.clone().unwrap());
     }
 
@@ -110,10 +115,12 @@ pub fn verify_with_veraison_instance<DE: EmitDiagnostic>(
 
     let nonce = Nonce::Value(challenge.to_vec());
 
-    let (session_url, _session) = cr.new_session(&nonce)?;
+    let (session_url, _session) = cr.new_session(&nonce).await?;
 
     // Run the challenge-response session
-    let ear_string = cr.challenge_response(evidence, media_type, &session_url)?;
+    let ear_string = cr
+        .challenge_response(evidence, media_type, &session_url)
+        .await?;
 
     // EARs are signed by Veraison. The public verification key is conveyed within the
     // endpoint descriptor that we pulled from the discovery API before. We can grab this
