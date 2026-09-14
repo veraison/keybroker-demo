@@ -5,7 +5,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::Mutex;
 
-use actix_web::{http, post, rt::task, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{http, post, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::prelude::*;
 use challenge::Challenger;
@@ -117,28 +117,25 @@ async fn submit_evidence(
     let verifier = Verifier {
         base_url: data.args.verifier.clone(),
         root_certificate: data.args.verifier_root_certificate.clone(),
+        no_check_certificate: data.args.no_check_certificate,
     };
     let reference_values = data.args.reference_values.clone();
     let verbosity = data.args.verbosity;
 
-    // We are in an async context, but the verifier client is synchronous, so spawn
-    // it as a blocking task.
-    let handle = task::spawn_blocking(move || {
-        // TODO: In theory, this unwrap() could fail and panic if there are non-printing characters in the content type header.
-        let content_type_str = content_type.to_str().unwrap();
+    // TODO: In theory, this unwrap() could fail and panic if there are non-printing characters in the content type header.
+    let content_type_str = content_type.to_str().unwrap();
 
-        // TODO: Blind pass-through of content type here. Ideally we should do a friendly check against the set that Veraison supports.
-        verifier::verify_with_veraison_instance(
-            &verifier,
-            content_type_str,
-            &challenge.challenge_id,
-            &challenge.challenge_value,
-            &evidence_bytes,
-            &reference_values,
-            &CcaDiagnostics::new(verbosity),
-        )
-    });
-    let result = handle.await.unwrap();
+    // TODO: Blind pass-through of content type here. Ideally we should do a friendly check against the set that Veraison supports.
+    let result = verifier::verify_with_veraison_instance(
+        &verifier,
+        content_type_str,
+        &challenge.challenge_id,
+        &challenge.challenge_value,
+        &evidence_bytes,
+        &reference_values,
+        &CcaDiagnostics::new(verbosity),
+    )
+    .await;
 
     match result {
         Ok(verified) => {
@@ -217,6 +214,10 @@ struct Args {
     /// Optional verifier's custom root certificate to use for the TLS connection
     #[arg(long, default_value = None)]
     verifier_root_certificate: Option<PathBuf>,
+
+    /// Do not validate verifier's certificate.
+    #[arg(long, default_value_t = false)]
+    no_check_certificate: bool,
 
     /// Use the static CCA example token nonce instead of a randomly generated one
     #[arg(short, long, default_value_t = false)]
