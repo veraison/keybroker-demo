@@ -13,3 +13,6 @@ categories = ["cryptography", "hardware-support"]
 [dependencies]
 serde.workspace = true
 serde_with.workspace = true
+
+[lints]
+workspace = true

@@ -15,3 +15,6 @@ keybroker-client = { path = "../keybroker-client" }
 clap.workspace = true
 log.workspace = true
 stderrlog.workspace = true
+
+[lints]
+workspace = true

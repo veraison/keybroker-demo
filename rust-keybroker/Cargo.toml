@@ -1,5 +1,5 @@
 [workspace]
-
+resolver = "2"
 members = [
     "keybroker-client",
     "keybroker-common",
@@ -27,3 +27,8 @@ stderrlog = "0.6.0"
 thiserror = "2.0.8"
 tsm_report = { git = "https://github.com/veracruz-project/cca-utils-rs.git", rev = "cb88b76da722f2991365b159e3d575249dfbbe7d"}
 veraison-apiclient = { git = "https://github.com/veraison/rust-apiclient.git", rev = "91bb4ac"}
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+cargo = { level = "deny", priority = -1 }
+multiple_crate_versions = "allow"

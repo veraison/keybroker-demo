@@ -28,3 +28,6 @@ sha2.workspace = true
 stderrlog.workspace = true
 thiserror.workspace = true
 veraison-apiclient.workspace = true
+
+[lints]
+workspace = true
