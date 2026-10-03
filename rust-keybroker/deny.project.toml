@@ -1,0 +1,5 @@
+[sources]
+allow-git = [
+    # Used for tsm_report. See also: https://github.com/veraison/keybroker-demo/issues/31
+    "https://github.com/veracruz-project/cca-utils-rs.git",
+]

@@ -20,3 +20,6 @@ rsa.workspace = true
 stderrlog.workspace = true
 thiserror.workspace = true
 tsm_report.workspace = true
+
+[lints]
+workspace = true
